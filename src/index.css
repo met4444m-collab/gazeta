@@ -1,29 +1,16 @@
 @import "tailwindcss";
 
-@theme {
-  --color-glass: rgba(255, 255, 255, 0.06);
-  --color-glass-border: rgba(255, 255, 255, 0.12);
-  --color-glass-hover: rgba(255, 255, 255, 0.1);
-  --color-surface: rgba(20, 20, 28, 0.85);
-  --color-surface-solid: #14141c;
-  --color-text-primary: #e8e8f0;
-  --color-text-secondary: #8888a0;
-  --color-accent: #6c9fff;
-  --color-accent-glow: rgba(108, 159, 255, 0.3);
-  --color-danger: #ff6b6b;
-
-  /* Seasonal colors */
-  --color-spring: #7dd87d;
-  --color-summer: #ffd700;
-  --color-autumn: #e8843c;
-  --color-winter: #a8d4f0;
-
-  --font-sans: 'Inter', system-ui, -apple-system, sans-serif;
-}
-
+/* Custom colors via CSS variables */
 :root {
-  --season-color: var(--color-winter);
-  --season-particle: rgba(168, 212, 240, 0.4);
+  --glass: rgba(255, 255, 255, 0.06);
+  --glass-border: rgba(255, 255, 255, 0.12);
+  --glass-hover: rgba(255, 255, 255, 0.1);
+  --surface: rgba(20, 20, 28, 0.9);
+  --text-primary: #e8e8f0;
+  --text-secondary: #8888a0;
+  --accent: #6c9fff;
+  --accent-glow: rgba(108, 159, 255, 0.3);
+  --danger: #ff6b6b;
 }
 
 * {
@@ -37,114 +24,36 @@ html {
 }
 
 body {
-  font-family: var(--font-sans);
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
   background: #0a0a12;
-  color: var(--color-text-primary);
+  color: var(--text-primary);
   min-height: 100dvh;
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Scrollbar */
-::-webkit-scrollbar {
-  width: 6px;
-}
-::-webkit-scrollbar-track {
-  background: transparent;
-}
-::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.15);
-  border-radius: 3px;
-}
-::-webkit-scrollbar-thumb:hover {
-  background: rgba(255, 255, 255, 0.25);
-}
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
 
-/* Glass card */
+/* Glass card — more transparent so seasonal background shows through */
 .glass {
-  background: var(--color-glass);
-  backdrop-filter: blur(20px);
-  -webkit-backdrop-filter: blur(20px);
-  border: 1px solid var(--color-glass-border);
+  background: rgba(255, 255, 255, 0.04);
+  backdrop-filter: blur(6px);
+  -webkit-backdrop-filter: blur(6px);
+  border: 1px solid rgba(255, 255, 255, 0.14);
   border-radius: 16px;
-  transition: all 0.3s ease;
 }
 .glass:hover {
-  background: var(--color-glass-hover);
-  border-color: rgba(255, 255, 255, 0.18);
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .glass-strong {
-  background: var(--color-surface);
+  background: var(--surface);
   backdrop-filter: blur(30px);
   -webkit-backdrop-filter: blur(30px);
-  border: 1px solid var(--color-glass-border);
+  border: 1px solid var(--glass-border);
   border-radius: 16px;
-}
-
-/* Seasonal background */
-.season-bg {
-  position: fixed;
-  inset: 0;
-  z-index: 0;
-  pointer-events: none;
-  overflow: hidden;
-}
-
-.season-bg::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  background: radial-gradient(
-    ellipse at 50% 0%,
-    color-mix(in srgb, var(--season-color) 8%, transparent) 0%,
-    transparent 70%
-  );
-  opacity: 0.6;
-}
-
-/* Particle animation base */
-.season-particle {
-  position: absolute;
-  border-radius: 50%;
-  background: var(--season-particle);
-  pointer-events: none;
-  animation: float-particle linear infinite;
-}
-
-@keyframes float-particle {
-  0% {
-    transform: translateY(100vh) rotate(0deg);
-    opacity: 0;
-  }
-  10% {
-    opacity: 1;
-  }
-  90% {
-    opacity: 1;
-  }
-  100% {
-    transform: translateY(-10vh) rotate(360deg);
-    opacity: 0;
-  }
-}
-
-/* Frosted glass overlay */
-.frosted-overlay {
-  background: linear-gradient(
-    135deg,
-    rgba(255, 255, 255, 0.03) 0%,
-    rgba(255, 255, 255, 0.01) 50%,
-    rgba(255, 255, 255, 0.04) 100%
-  );
-  backdrop-filter: blur(2px);
-}
-
-/* Neon glow */
-.neon-glow {
-  box-shadow:
-    0 0 15px var(--color-accent-glow),
-    0 0 30px rgba(108, 159, 255, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.05);
 }

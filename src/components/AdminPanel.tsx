@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useRef, useState } from "react";
+import { convexMutation, setSession } from "../lib/convex";
 
 interface AdminPanelProps {
   onRegistered: (name: string) => void;
@@ -6,47 +7,49 @@ interface AdminPanelProps {
 
 export default function AdminPanel({ onRegistered }: AdminPanelProps) {
   const [isOpen, setIsOpen] = useState(false);
-  const [_clickCount, setClickCount] = useState(0);
   const [code, setCode] = useState("");
   const [name, setName] = useState("");
   const [error, setError] = useState("");
-  const [success, setSuccess] = useState(false);
   const [loading, setLoading] = useState(false);
+  const clickCount = useRef(0);
+  const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  const handleSecretClick = useCallback(() => {
-    setClickCount((prev) => {
-      const next = prev + 1;
-      if (next >= 3) {
-        setIsOpen(true);
-        return 0;
-      }
-      // Reset after 2 seconds if not completed
-      setTimeout(() => setClickCount(0), 2000);
-      return next;
-    });
-  }, []);
+  // Secret button: must be clicked 3 times in a row (within 2s between clicks)
+  const handleSecretClick = () => {
+    clickCount.current += 1;
+    if (clickTimer.current) clearTimeout(clickTimer.current);
+    if (clickCount.current >= 3) {
+      clickCount.current = 0;
+      setIsOpen(true);
+      return;
+    }
+    clickTimer.current = setTimeout(() => {
+      clickCount.current = 0;
+    }, 2000);
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError("");
     setLoading(true);
-
     try {
-      const { ConvexClient } = await import("convex/browser");
-      const client = new ConvexClient(import.meta.env.VITE_CONVEX_URL);
-      
-      const result = await client.mutation("users:register" as any, {
-        name: name.trim(),
-        code: code.trim(),
-      });
-
-      if (result) {
-        setSuccess(true);
-        localStorage.setItem("publisher_name", name.trim());
-        onRegistered(name.trim());
+      let result: { token: string; name: string; role: string };
+      try {
+        // Try registration first (new name)
+        result = await convexMutation("users:register", { name: name.trim(), code: code.trim() });
+      } catch (err: any) {
+        // If the name already exists, fall back to login
+        if (String(err.message).includes("уже существует")) {
+          result = await convexMutation("users:login", { name: name.trim(), code: code.trim() });
+        } else {
+          throw err;
+        }
       }
+      setSession(result.token, result.name);
+      onRegistered(result.name);
+      setIsOpen(false);
     } catch (err: any) {
-      setError(err.message || "Ошибка регистрации.");
+      setError(err.message || "Ошибка.");
     } finally {
       setLoading(false);
     }
@@ -54,87 +57,22 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
 
   return (
     <>
-      {/* Invisible trigger button - top left */}
-      <button
-        onClick={handleSecretClick}
-        className="fixed top-0 left-0 z-50 w-16 h-16 opacity-0 cursor-default"
-        aria-hidden="true"
-        tabIndex={-1}
-      />
-
-      {/* Admin Panel Modal */}
+      <button onClick={handleSecretClick} style={{ position: "fixed", top: 0, left: 0, zIndex: 60, width: 80, height: 64, opacity: 0, cursor: "default" }} aria-hidden="true" />
       {isOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-          <div className="glass-strong w-full max-w-md mx-4 p-6 rounded-2xl">
-            <div className="flex justify-between items-center mb-6">
-              <h2 className="text-xl font-bold text-text-primary">
-                🔐 Панель доступа
-              </h2>
-              <button
-                onClick={() => { setIsOpen(false); setCode(""); setName(""); setError(""); setSuccess(false); }}
-                className="text-text-secondary hover:text-text-primary transition-colors text-2xl leading-none"
-              >
-                ×
-              </button>
+        <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: 16 }}>
+          <div className="glass-strong" style={{ width: "100%", maxWidth: 360, padding: 24, borderRadius: 16 }}>
+            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
+              <h2 style={{ fontSize: 18, fontWeight: 700, color: "#e8e8f0" }}>🔐 Доступ</h2>
+              <button onClick={() => { setIsOpen(false); setError(""); }} style={{ background: "none", border: "none", color: "#8888a0", fontSize: 20, cursor: "pointer" }}>×</button>
             </div>
-
-            {success ? (
-              <div className="text-center py-8">
-                <div className="text-4xl mb-4">✅</div>
-                <p className="text-text-primary font-medium">Добро пожаловать, {name}!</p>
-                <p className="text-text-secondary text-sm mt-2">Теперь вы можете публиковать новости.</p>
-                <button
-                  onClick={() => { setIsOpen(false); setSuccess(false); }}
-                  className="mt-6 px-6 py-2 bg-accent/20 text-accent rounded-lg hover:bg-accent/30 transition-colors"
-                >
-                  Закрыть
-                </button>
-              </div>
-            ) : (
-              <form onSubmit={handleSubmit} className="space-y-4">
-                <div>
-                  <label className="block text-sm text-text-secondary mb-1.5">
-                    Ваше имя
-                  </label>
-                  <input
-                    type="text"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                    placeholder="Иван Иванов"
-                    required
-                    minLength={2}
-                    maxLength={50}
-                    className="w-full px-4 py-2.5 bg-white/5 border border-glass-border rounded-lg text-text-primary placeholder-text-secondary/50 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-all"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-sm text-text-secondary mb-1.5">
-                    Код доступа
-                  </label>
-                  <input
-                    type="password"
-                    value={code}
-                    onChange={(e) => setCode(e.target.value)}
-                    placeholder="40-значный код"
-                    required
-                    className="w-full px-4 py-2.5 bg-white/5 border border-glass-border rounded-lg text-text-primary placeholder-text-secondary/50 focus:outline-none focus:border-accent/50 focus:ring-1 focus:ring-accent/30 transition-all font-mono"
-                  />
-                </div>
-
-                {error && (
-                  <p className="text-danger text-sm">{error}</p>
-                )}
-
-                <button
-                  type="submit"
-                  disabled={loading || !code || !name}
-                  className="w-full py-2.5 bg-accent/20 text-accent font-medium rounded-lg hover:bg-accent/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all"
-                >
-                  {loading ? "Проверка..." : "Войти как издатель"}
-                </button>
-              </form>
-            )}
+            <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
+              <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ваше имя" required minLength={2} style={{ width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "#e8e8f0", fontSize: 14, outline: "none" }} />
+              <input type="password" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Код доступа" required style={{ width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "#e8e8f0", fontSize: 14, outline: "none", fontFamily: "monospace" }} />
+              {error && <p style={{ color: "#ff6b6b", fontSize: 12 }}>{error}</p>}
+              <button type="submit" disabled={!code || !name || loading} style={{ width: "100%", padding: "10px 0", background: "rgba(108,159,255,0.15)", color: "#6c9fff", fontWeight: 500, border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer", opacity: (!code || !name || loading) ? 0.4 : 1 }}>
+                {loading ? "⏳ Проверяю..." : "Войти"}
+              </button>
+            </form>
           </div>
         </div>
       )}

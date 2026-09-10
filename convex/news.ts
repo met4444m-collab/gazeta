@@ -33,6 +33,16 @@ async function checkRateLimit(ctx: any, identifier: string) {
   return true;
 }
 
+// Resolve a session token to the user record
+async function getUserByToken(ctx: any, token: string) {
+  const session = await ctx.db
+    .query("sessions")
+    .withIndex("by_token", (q: any) => q.eq("token", token))
+    .first();
+  if (!session) return null;
+  return await ctx.db.get(session.userId);
+}
+
 // Get all news posts, newest first
 export const list = query({
   args: {},
@@ -54,14 +64,14 @@ export const get = query({
   },
 });
 
-// Create news post (only for registered publishers)
+// Create news post (only for authenticated publishers with a valid token)
 export const create = mutation({
   args: {
     title: v.string(),
     body: v.string(),
     imageUrl: v.optional(v.string()),
     videoUrl: v.optional(v.string()),
-    authorName: v.string(),
+    token: v.string(),
     clientIp: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
@@ -72,13 +82,10 @@ export const create = mutation({
       throw new Error("Слишком много запросов. Подождите минуту.");
     }
 
-    // Validate author exists
-    const user = await ctx.db
-      .query("users")
-      .withIndex("by_name", (q) => q.eq("name", args.authorName))
-      .first();
+    // Auth check via session token
+    const user = await getUserByToken(ctx, args.token);
     if (!user) {
-      throw new Error("Пользователь не зарегистрирован.");
+      throw new Error("Требуется вход. Сессия недействительна.");
     }
 
     // Validate content
@@ -92,15 +99,16 @@ export const create = mutation({
       body: args.body.trim(),
       imageUrl: args.imageUrl?.trim(),
       videoUrl: args.videoUrl?.trim(),
-      authorName: args.authorName,
+      authorName: user.name,
       createdAt: Date.now(),
     });
   },
 });
 
-// Update news post
+// Update news post (only the author or an admin)
 export const update = mutation({
   args: {
+    token: v.string(),
     id: v.id("news"),
     title: v.optional(v.string()),
     body: v.optional(v.string()),
@@ -108,6 +116,15 @@ export const update = mutation({
     videoUrl: v.optional(v.string()),
   },
   handler: async (ctx, args) => {
+    const user = await getUserByToken(ctx, args.token);
+    if (!user) throw new Error("Требуется вход. Сессия недействительна.");
+
+    const post = await ctx.db.get(args.id);
+    if (!post) throw new Error("Новость не найдена.");
+    if (post.authorName !== user.name && user.role !== "admin") {
+      throw new Error("Можно редактировать только свои новости.");
+    }
+
     const updates: Record<string, any> = { updatedAt: Date.now() };
     if (args.title !== undefined) updates.title = args.title.trim();
     if (args.body !== undefined) updates.body = args.body.trim();
@@ -117,10 +134,19 @@ export const update = mutation({
   },
 });
 
-// Delete news post
+// Delete news post (only the author or an admin)
 export const remove = mutation({
-  args: { id: v.id("news") },
+  args: { token: v.string(), id: v.id("news") },
   handler: async (ctx, args) => {
+    const user = await getUserByToken(ctx, args.token);
+    if (!user) throw new Error("Требуется вход. Сессия недействительна.");
+
+    const post = await ctx.db.get(args.id);
+    if (!post) throw new Error("Новость не найдена.");
+    if (post.authorName !== user.name && user.role !== "admin") {
+      throw new Error("Можно удалять только свои новости.");
+    }
+
     await ctx.db.delete(args.id);
   },
 });

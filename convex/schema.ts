@@ -9,6 +9,13 @@ export default defineSchema({
     createdAt: v.number(),
   }).index("by_name", ["name"]),
 
+  // Session tokens (one per logged-in user)
+  sessions: defineTable({
+    token: v.string(),
+    userId: v.id("users"),
+    createdAt: v.number(),
+  }).index("by_token", ["token"]),
+
   // News posts
   news: defineTable({
     title: v.string(),
@@ -33,4 +40,11 @@ export default defineSchema({
     code: v.string(),
     active: v.boolean(),
   }),
+
+  // Brute-force protection for the access code
+  authLimits: defineTable({
+    identifier: v.string(), // "global" lockout
+    failedCount: v.number(),
+    lockedUntil: v.optional(v.number()),
+  }).index("by_identifier", ["identifier"]),
 });

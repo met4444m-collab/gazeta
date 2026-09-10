@@ -8,7 +8,6 @@ interface NewsPost {
   videoUrl?: string;
   authorName: string;
   createdAt: number;
-  updatedAt?: number;
 }
 
 interface NewsFeedProps {
@@ -21,171 +20,132 @@ interface NewsFeedProps {
 }
 
 function getYouTubeEmbed(url: string): string | null {
-  const match = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?#]+)/);
-  return match ? `https://www.youtube.com/embed/${match[1]}` : null;
+  const m = url.match(/(?:youtube\.com\/watch\?v=|youtu\.be\/|youtube\.com\/embed\/)([^&?#]+)/);
+  return m ? `https://www.youtube.com/embed/${m[1]}` : null;
 }
 
 function getVKEmbed(url: string): string | null {
-  const match = url.match(/vk\.com\/video(-?\d+_\d+)/);
-  return match ? `https://vk.com/video_ext.php?oid=${match[1].split("_")[0]}&id=${match[1].split("_")[1]}` : null;
+  const m = url.match(/vk\.com\/video(-?\d+_\d+)/);
+  return m ? `https://vk.com/video_ext.php?oid=${m[1].split("_")[0]}&id=${m[1].split("_")[1]}` : null;
 }
 
-function formatDate(ts: number): string {
-  const d = new Date(ts);
-  const now = new Date();
-  const diff = now.getTime() - ts;
-
+function timeAgo(ts: number): string {
+  const diff = Date.now() - ts;
   if (diff < 60_000) return "только что";
-  if (diff < 3600_000) return `${Math.floor(diff / 60_000)} мин. назад`;
-  if (diff < 86400_000) return `${Math.floor(diff / 3600_000)} ч. назад`;
-
-  return d.toLocaleDateString("ru-RU", {
-    day: "numeric",
-    month: "long",
-    year: d.getFullYear() !== now.getFullYear() ? "numeric" : undefined,
-  });
+  if (diff < 3600_000) return `${Math.floor(diff / 60_000)} мин.`;
+  if (diff < 86400_000) return `${Math.floor(diff / 3600_000)} ч.`;
+  if (diff < 604800_000) return `${Math.floor(diff / 86400_000)} дн.`;
+  return new Date(ts).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
 
 function NewsCard({ post, publisherName, onEdit, onDelete }: {
   post: NewsPost;
   publisherName: string | null;
-  onEdit: (post: NewsPost) => void;
+  onEdit: (p: NewsPost) => void;
   onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const isLong = post.body.length > 300;
-  const displayBody = expanded || !isLong ? post.body : post.body.slice(0, 300) + "...";
+  const isLong = post.body.length > 400;
+  const text = expanded || !isLong ? post.body : post.body.slice(0, 400) + "…";
 
   const videoEmbed = post.videoUrl
     ? getYouTubeEmbed(post.videoUrl) || getVKEmbed(post.videoUrl)
     : null;
 
   return (
-    <article className="glass p-5 sm:p-6 w-full max-w-2xl mx-auto">
-      {/* Header */}
-      <div className="flex items-start justify-between gap-3 mb-4">
-        <div>
-          <h2 className="text-lg sm:text-xl font-bold text-text-primary leading-tight">
-            {post.title}
-          </h2>
-          <div className="flex items-center gap-2 mt-1.5 text-sm text-text-secondary">
-            <span className="font-medium text-accent">{post.authorName}</span>
-            <span>•</span>
-            <time>{formatDate(post.createdAt)}</time>
+    <article className="glass p-4 sm:p-5" style={{ width: "100%" }}>
+      {/* Author row */}
+      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <div style={{
+            width: 28, height: 28, borderRadius: "50%",
+            background: "rgba(108, 159, 255, 0.15)",
+            display: "flex", alignItems: "center", justifyContent: "center",
+            fontSize: 12, fontWeight: 700, color: "var(--accent)"
+          }}>
+            {post.authorName.charAt(0).toUpperCase()}
           </div>
+          <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)" }}>
+            {post.authorName}
+          </span>
         </div>
-
-        {publisherName && (
-          <div className="flex gap-1 shrink-0">
-            <button
-              onClick={() => onEdit(post)}
-              className="p-1.5 rounded-lg text-text-secondary hover:text-text-primary hover:bg-white/5 transition-all"
-              title="Редактировать"
-            >
-              ✏️
-            </button>
-            <button
-              onClick={() => {
-                if (confirm("Удалить эту новость?")) onDelete(post._id);
-              }}
-              className="p-1.5 rounded-lg text-text-secondary hover:text-danger hover:bg-white/5 transition-all"
-              title="Удалить"
-            >
-              🗑️
-            </button>
-          </div>
-        )}
+        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+          <time style={{ fontSize: 12, color: "var(--text-secondary)" }}>
+            {timeAgo(post.createdAt)}
+          </time>
+          {publisherName && (
+            <>
+              <button onClick={() => onEdit(post)} style={{ fontSize: 12, color: "var(--text-secondary)", cursor: "pointer", background: "none", border: "none" }} title="Ред.">✏️</button>
+              <button onClick={() => { if (confirm("Удалить?")) onDelete(post._id); }} style={{ fontSize: 12, color: "var(--text-secondary)", cursor: "pointer", background: "none", border: "none" }}>🗑</button>
+            </>
+          )}
+        </div>
       </div>
+
+      {/* Title */}
+      <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8, lineHeight: 1.3 }}>
+        {post.title}
+      </h3>
 
       {/* Image */}
       {post.imageUrl && (
-        <div className="mb-4 rounded-xl overflow-hidden">
-          <img
-            src={post.imageUrl}
-            alt={post.title}
-            className="w-full h-auto object-cover max-h-96"
-            loading="lazy"
-          />
-        </div>
+        <img src={post.imageUrl} alt="" style={{ width: "100%", borderRadius: 8, marginBottom: 12, maxHeight: 320, objectFit: "cover" }} loading="lazy" />
       )}
 
       {/* Video */}
       {videoEmbed && (
-        <div className="mb-4 rounded-xl overflow-hidden">
-          <iframe
-            src={videoEmbed}
-            className="w-full aspect-video"
-            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-            allowFullScreen
-            loading="lazy"
-          />
+        <div style={{ marginBottom: 12, borderRadius: 8, overflow: "hidden" }}>
+          <iframe src={videoEmbed} style={{ width: "100%", aspectRatio: "16/9" }} allow="autoplay; encrypted-media" allowFullScreen loading="lazy" />
         </div>
       )}
 
       {/* Body */}
-      <div className="text-text-secondary leading-relaxed whitespace-pre-wrap">
-        {displayBody}
-        {isLong && (
-          <button
-            onClick={() => setExpanded(!expanded)}
-            className="ml-1 text-accent hover:text-accent/80 transition-colors font-medium"
-          >
-            {expanded ? "Свернуть" : "Читать далее"}
-          </button>
-        )}
-      </div>
+      <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
+        {text}
+      </p>
+      {isLong && (
+        <button
+          onClick={() => setExpanded(!expanded)}
+          style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4, fontWeight: 500 }}
+        >
+          {expanded ? "Свернуть" : "Ещё"}
+        </button>
+      )}
     </article>
   );
 }
 
 export default function NewsFeed({ publisherName, onEdit, onDelete, onNewPost, posts, loading }: NewsFeedProps) {
   return (
-    <div className="relative z-10 w-full max-w-2xl mx-auto px-4 py-6 space-y-4">
-      {/* Publisher action bar */}
+    <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 640, margin: "0 auto", padding: "0 16px" }}>
+      {/* New post button */}
       {publisherName && (
-        <div className="glass p-4 flex items-center justify-between">
-          <div className="flex items-center gap-2">
-            <span className="text-accent font-medium">📰 {publisherName}</span>
-            <span className="text-text-secondary text-sm">• издатель</span>
-          </div>
-          <button
-            onClick={onNewPost}
-            className="px-4 py-2 bg-accent/20 text-accent font-medium rounded-lg hover:bg-accent/30 transition-all text-sm"
-          >
-            + Новость
-          </button>
-        </div>
-      )}
-
-      {/* Loading */}
-      {loading && (
-        <div className="text-center py-12">
-          <div className="inline-block w-8 h-8 border-2 border-accent/30 border-t-accent rounded-full animate-spin" />
-          <p className="text-text-secondary text-sm mt-3">Загрузка новостей...</p>
-        </div>
-      )}
-
-      {/* Empty state */}
-      {!loading && posts.length === 0 && (
-        <div className="text-center py-16">
-          <div className="text-5xl mb-4">📰</div>
-          <h3 className="text-xl font-bold text-text-primary mb-2">Пока нет новостей</h3>
-          <p className="text-text-secondary">
-            Будьте первым, кто опубликует новость для Лицея 12!
-          </p>
-        </div>
+        <button
+          onClick={onNewPost}
+          className="glass"
+          style={{
+            width: "100%", padding: "12px 16px", marginBottom: 12,
+            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
+            color: "var(--accent)", fontSize: 14, fontWeight: 500,
+            cursor: "pointer", borderRadius: 12
+          }}
+        >
+          + Написать новость
+        </button>
       )}
 
       {/* Posts */}
-      {posts.map((post) => (
-        <NewsCard
-          key={post._id}
-          post={post}
-          publisherName={publisherName}
-          onEdit={onEdit}
-          onDelete={onDelete}
-        />
-      ))}
+      <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8 }}>
+        {posts.map((post) => (
+          <NewsCard key={post._id} post={post} publisherName={publisherName} onEdit={onEdit} onDelete={onDelete} />
+        ))}
+
+        {!loading && posts.length === 0 && (
+          <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-secondary)", fontSize: 14 }}>
+            Новостей пока что нет
+          </p>
+        )}
+      </div>
     </div>
   );
 }
