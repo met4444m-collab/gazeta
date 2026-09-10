@@ -24,3 +24,4 @@ convex/_generated
 *.njsproj
 *.sln
 *.sw?
+supabase/.temp/
