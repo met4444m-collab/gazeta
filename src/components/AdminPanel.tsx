@@ -11,32 +11,34 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
   const [name, setName] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
-  const clickCount = useRef(0);
+  const [clickCount, setClickCount] = useState(0);
   const clickTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
-  // Secret button: must be clicked 3 times in a row (within 2s between clicks)
+  // Secret button: must be tapped 5 times in a row (within 1.5s between taps)
+  // Small 48x40px zone in the very corner, fully invisible, no pointer feedback.
   const handleSecretClick = () => {
-    clickCount.current += 1;
+    const next = clickCount + 1;
     if (clickTimer.current) clearTimeout(clickTimer.current);
-    if (clickCount.current >= 3) {
-      clickCount.current = 0;
+    if (next >= 5) {
+      setClickCount(0);
       setIsOpen(true);
       return;
     }
+    setClickCount(next);
     clickTimer.current = setTimeout(() => {
-      clickCount.current = 0;
-    }, 2000);
+      setClickCount(0);
+    }, 1500);
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setError("");
-    setLoading(true);
-    try {
-      let result: { token: string; name: string; role: string };
+    e.preventDefault();      setError("");
+      setLoading(true);
       try {
-        // Try registration first (new name)
-        result = await register(name.trim(), code.trim());
+        let result: { token: string; name: string; role: string };
+        try {
+          // Try registration first (new name); registration is limited to the
+          // first user on the server — later users must already exist (login).
+          result = await register(name.trim(), code.trim());
       } catch (err: any) {
         // If the name already exists, fall back to login
         if (String(err.message).includes("уже существует")) {
@@ -57,7 +59,7 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
 
   return (
     <>
-      <button onClick={handleSecretClick} style={{ position: "fixed", top: 0, left: 0, zIndex: 60, width: 80, height: 64, opacity: 0, cursor: "default" }} aria-hidden="true" />
+      <button onClick={handleSecretClick} style={{ position: "fixed", top: 0, left: 0, zIndex: 60, width: 48, height: 40, opacity: 0, cursor: "default" }} aria-hidden="true" />
       {isOpen && (
         <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: 16 }}>
           <div className="glass-strong" style={{ width: "100%", maxWidth: 360, padding: 24, borderRadius: 16 }}>

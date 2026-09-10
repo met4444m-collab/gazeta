@@ -14,6 +14,7 @@
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
 
 const ADMIN_CODE = Deno.env.get("ADMIN_CODE") ?? "";
+const MAX_USERS = 5;           // registration is closed after the first N accounts
 const MAX_ATTEMPTS = 3;
 const LOCK_MS = 30 * 60 * 1000; // 30 min lockout
 const RATE_LIMIT = 10;          // auth requests per minute per IP
@@ -62,7 +63,7 @@ const json = (body: any, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
 
 Deno.serve(async (req) => {
-  if (req.method === "OPTIONS") return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type", "Access-Control-Allow-Methods": "POST" } });
+  if (req.method === "OPTIONS") return new Response(null, { headers: { "Access-Control-Allow-Origin": "*", "Access-Control-Allow-Headers": "authorization, content-type, apikey, x-client-info", "Access-Control-Allow-Methods": "POST, OPTIONS", "Access-Control-Max-Age": "86400" } });
   if (req.method !== "POST") return json({ error: "POST only" }, 405);
 
   const addr = ip(req);
@@ -87,6 +88,11 @@ Deno.serve(async (req) => {
       return json(data);
     }
     if (route === "news/update") {
+      // fetch the post to enforce ownership
+      const post = await admin.from("news").select("author_name").eq("id", body.id).maybeSingle();
+      if (!post.data) return json({ error: "Новость не найдена." }, 404);
+      if (user.role !== "admin" && post.data.author_name !== user.name)
+        return json({ error: "Можно редактировать только свои новости." }, 403);
       const patch: any = {
         title: String(body.title ?? "").trim().slice(0, 200),
         body: String(body.body ?? "").trim().slice(0, 10000),
@@ -98,6 +104,11 @@ Deno.serve(async (req) => {
       return json(data);
     }
     if (route === "news/remove") {
+      // fetch the post to enforce ownership
+      const post = await admin.from("news").select("author_name").eq("id", body.id).maybeSingle();
+      if (!post.data) return json({ error: "Новость не найдена." }, 404);
+      if (user.role !== "admin" && post.data.author_name !== user.name)
+        return json({ error: "Можно удалять только свои новости." }, 403);
       const { error } = await admin.from("news").delete().eq("id", body.id);
       if (error) return json({ error: error.message }, 400);
       return json({});
@@ -122,6 +133,8 @@ Deno.serve(async (req) => {
     if (route === "auth/register") {
       if (existing.data) return json({ error: "Пользователь с таким именем уже существует." }, 400);
       const count = await admin.from("users").select("id", { count: "exact", head: true });
+      if ((count.count ?? 0) >= MAX_USERS)
+        return json({ error: "Регистрация закрыта: все места издателей заняты." }, 403);
       const role = (count.count ?? 0) === 0 ? "admin" : "publisher";
       const { data: user, error } = await admin.from("users").insert({ name, role }).select().single();
       if (error) return json({ error: error.message }, 400);
