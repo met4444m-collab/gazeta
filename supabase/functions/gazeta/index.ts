@@ -88,10 +88,11 @@ Deno.serve(async (req) => {
       return json(data);
     }
     if (route === "news/update") {
-      // fetch the post to enforce ownership
+      // fetch the post to enforce ownership (admin and moderator may edit any post)
+      const isStaff = user.role === "admin" || user.role === "moderator";
       const post = await admin.from("news").select("author_name").eq("id", body.id).maybeSingle();
       if (!post.data) return json({ error: "Новость не найдена." }, 404);
-      if (user.role !== "admin" && post.data.author_name !== user.name)
+      if (!isStaff && post.data.author_name !== user.name)
         return json({ error: "Можно редактировать только свои новости." }, 403);
       const patch: any = {
         title: String(body.title ?? "").trim().slice(0, 200),
@@ -104,10 +105,11 @@ Deno.serve(async (req) => {
       return json(data);
     }
     if (route === "news/remove") {
-      // fetch the post to enforce ownership
+      // fetch the post to enforce ownership (admin and moderator may delete any post)
+      const isStaff = user.role === "admin" || user.role === "moderator";
       const post = await admin.from("news").select("author_name").eq("id", body.id).maybeSingle();
       if (!post.data) return json({ error: "Новость не найдена." }, 404);
-      if (user.role !== "admin" && post.data.author_name !== user.name)
+      if (!isStaff && post.data.author_name !== user.name)
         return json({ error: "Можно удалять только свои новости." }, 403);
       const { error } = await admin.from("news").delete().eq("id", body.id);
       if (error) return json({ error: error.message }, 400);
@@ -135,7 +137,9 @@ Deno.serve(async (req) => {
       const count = await admin.from("users").select("id", { count: "exact", head: true });
       if ((count.count ?? 0) >= MAX_USERS)
         return json({ error: "Регистрация закрыта: все места издателей заняты." }, 403);
-      const role = (count.count ?? 0) === 0 ? "admin" : "publisher";
+      // 1st account = admin, 2nd account = moderator (can edit/delete ANY posts),
+      // everyone after = publisher (own posts only)
+      const role = (count.count ?? 0) === 0 ? "admin" : (count.count ?? 0) === 1 ? "moderator" : "publisher";
       const { data: user, error } = await admin.from("users").insert({ name, role }).select().single();
       if (error) return json({ error: error.message }, 400);
       const token = newToken();
