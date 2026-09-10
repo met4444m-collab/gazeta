@@ -1,8 +1,12 @@
 import { query, mutation } from "./_generated/server";
 import { v } from "convex/values";
 
-// The 40-character admin access code (letters + numbers)
-const ADMIN_CODE = "Xk9mP2vL8nQ4wR7jT5yH3bD6fG1cA0sE";
+// The 40-character admin access code is stored as a Convex environment
+// variable (ADMIN_CODE), NOT in the source code — so a public repo
+// contains no secrets. Set it with: bun convex env set ADMIN_CODE <code>
+function getAdminCode(): string | undefined {
+  return process.env.ADMIN_CODE?.trim() || undefined;
+}
 
 // Brute-force protection: after 3 failed attempts, lock for 30 minutes
 const MAX_ATTEMPTS = 3;
@@ -105,8 +109,9 @@ export const register = mutation({
     const locked = await checkLocked(ctx);
     if (locked) throw new Error(locked);
 
-    // Validate code
-    if (args.code.trim() !== ADMIN_CODE) {
+    // Validate code (server-side secret; if unset, registration is disabled)
+    const adminCode = getAdminCode();
+    if (!adminCode || args.code.trim() !== adminCode) {
       await recordFailure(ctx);
       throw new Error("Неверный код доступа.");
     }
@@ -162,7 +167,8 @@ export const login = mutation({
       .withIndex("by_name", (q) => q.eq("name", name))
       .first();
 
-    if (!user || args.code.trim() !== ADMIN_CODE) {
+    const adminCode = getAdminCode();
+    if (!adminCode || args.code.trim() !== adminCode) {
       await recordFailure(ctx);
       throw new Error("Неверное имя или код доступа.");
     }
