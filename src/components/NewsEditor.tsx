@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { convexMutation, getToken } from "../lib/convex";
+import { createNews, updateNews, getToken } from "../lib/convex";
 
 interface NewsEditorProps {
   onCreated: () => void;
@@ -25,9 +25,9 @@ export default function NewsEditor({ onCreated, onCancel, editPost }: NewsEditor
     try {
       const token = getToken();
       if (isEditing) {
-        await convexMutation("news:update", { token, id: editPost._id, title: title.trim(), body: body.trim(), imageUrl: imageUrl.trim() || undefined, videoUrl: videoUrl.trim() || undefined });
+        await updateNews(token, editPost._id, { title: title.trim(), body: body.trim(), imageUrl: imageUrl.trim() || undefined, videoUrl: videoUrl.trim() || undefined });
       } else {
-        await convexMutation("news:create", { token, title: title.trim(), body: body.trim(), imageUrl: imageUrl.trim() || undefined, videoUrl: videoUrl.trim() || undefined });
+        await createNews(token, { title: title.trim(), body: body.trim(), imageUrl: imageUrl.trim() || undefined, videoUrl: videoUrl.trim() || undefined });
       }
       onCreated();
     } catch (err: any) {

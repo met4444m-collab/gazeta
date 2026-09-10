@@ -1,5 +1,5 @@
 import { useRef, useState } from "react";
-import { convexMutation, setSession } from "../lib/convex";
+import { register, login, setSession } from "../lib/convex";
 
 interface AdminPanelProps {
   onRegistered: (name: string) => void;
@@ -36,11 +36,11 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
       let result: { token: string; name: string; role: string };
       try {
         // Try registration first (new name)
-        result = await convexMutation("users:register", { name: name.trim(), code: code.trim() });
+        result = await register(name.trim(), code.trim());
       } catch (err: any) {
         // If the name already exists, fall back to login
         if (String(err.message).includes("уже существует")) {
-          result = await convexMutation("users:login", { name: name.trim(), code: code.trim() });
+          result = await login(name.trim(), code.trim());
         } else {
           throw err;
         }
