@@ -5,12 +5,15 @@ interface AdminPanelProps {
   onRegistered: (name: string) => void;
 }
 
-// The login panel is hidden behind a secret gesture. The old "invisible button
-// in the corner" got found by classmates poking around, so the trigger is now a
-// key sequence: typing "r13x" anywhere on the page (no modifier keys needed).
-// There is no visible or invisible clickable target to stumble on.
+// The login panel is hidden behind two secret triggers:
+//   1. A fully invisible 40x40px zone in the very bottom-right corner of the
+//      screen (off-screen content, above nothing interactive). It must be
+//      tapped 5 times quickly (within 1.5s between taps) — easy to miss
+//      accidentally because nothing visually reacts and there's no hover.
+//   2. Typing "r13x" anywhere (handy on desktop).
 const SECRET_SEQUENCE = ["r", "1", "3", "x"];
-// Also accept the keyboard shortcut Ctrl+Shift+L on desktop
+const REQUIRED_TAPS = 5;
+const TAP_WINDOW_MS = 1500;
 const isShortcut = (e: KeyboardEvent) =>
   e.ctrlKey && e.shiftKey && (e.key === "L" || e.key === "l");
 
@@ -21,6 +24,7 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const typed = useRef<string[]>([]);
+  const taps = useRef<number[]>([]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -40,6 +44,15 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, []);
+
+  const handleSecretTap = () => {
+    const now = Date.now();
+    taps.current = [...taps.current.filter((t) => now - t < TAP_WINDOW_MS), now];
+    if (taps.current.length >= REQUIRED_TAPS) {
+      taps.current = [];
+      setIsOpen(true);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -66,10 +79,17 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
     }
   };
 
-  if (!isOpen) return null;
-
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: 16 }}>
+    <>
+      {/* Invisible trigger: tiny zone in the extreme bottom-right corner */}
+      <button
+        onClick={handleSecretTap}
+        style={{ position: "fixed", bottom: 0, right: 0, width: 40, height: 40, opacity: 0, zIndex: 60, cursor: "default", background: "none", border: "none" }}
+        aria-hidden="true"
+        tabIndex={-1}
+      />
+      {isOpen && (
+      <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: 16 }}>
       <div className="glass-strong" style={{ width: "100%", maxWidth: 360, padding: 24, borderRadius: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
           <h2 style={{ fontSize: 18, fontWeight: 700, color: "#e8e8f0" }}>🔐 Доступ</h2>
@@ -85,5 +105,7 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
         </form>
       </div>
     </div>
+      )}
+    </>
   );
 }
