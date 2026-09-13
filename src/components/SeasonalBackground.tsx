@@ -53,21 +53,28 @@ const SEASONS: Record<Season, {
   },
 };
 
-// How far through the season are we? 0 = start, 1 = end
+// How far through the season are we? 0 = Sept 1, 1 = Nov 30 (for autumn)
+// Uses the actual season boundaries instead of a fixed 91-day assumption.
 function getSeasonProgress(month: number): number {
   const s = getSeason(month);
   const info = SEASONS[s];
-  const totalDays = 91; // ~3 months = ~91 days
+  const now = new Date();
   const startMonth = info.startMonth;
+  // Total days in the season (3 consecutive months)
+  let totalDays = 0;
+  for (let i = 0; i < 3; i++) {
+    const m = (startMonth + i) % 12;
+    totalDays += new Date(now.getFullYear(), m + 1, 0).getDate();
+  }
   // Days elapsed since season start
   let elapsed = 0;
   for (let i = 0; i < 3; i++) {
     const m = (startMonth + i) % 12;
     if (m === month) {
-      elapsed += new Date().getDate();
+      elapsed += now.getDate();
       break;
     }
-    elapsed += new Date(new Date().getFullYear(), m + 1, 0).getDate();
+    elapsed += new Date(now.getFullYear(), m + 1, 0).getDate();
   }
   return Math.min(1, elapsed / totalDays);
 }
@@ -153,6 +160,10 @@ export default function SeasonalBackground() {
   const season = getSeason(month);
   const info = SEASONS[season];
   const progress = getSeasonProgress(month); // 0..1
+  // Leaves pile up faster early in the season so day-to-day change is clearly
+  // visible: ~35% of the screen by Sept 8, ~42% by Sept 13, full by mid-October
+  // (linear progress would give only 9%→14% — imperceptible day to day).
+  const groundProgress = Math.pow(progress, 0.45);
 
   // Track screen size so leaf density adapts (tight rows on any device)
   const [screen, setScreen] = useState({ w: window.innerWidth, h: window.innerHeight });
@@ -166,7 +177,7 @@ export default function SeasonalBackground() {
   // Enough rows to fill 100% of the screen height
   const maxTotal = perRow * Math.ceil(100 / ROW_HEIGHT_VH);
   // Ground elements count: 0 at season start → full screen at end
-  const groundCount = Math.max(2, Math.round(progress * maxTotal));
+  const groundCount = Math.max(2, Math.round(groundProgress * maxTotal));
   const seed = now.getFullYear() * 12 + month;
 
   const groundElements = useMemo(
@@ -175,7 +186,7 @@ export default function SeasonalBackground() {
   );
 
   // Falling particles: more as season progresses
-  const fallingCount = Math.max(4, Math.round(progress * 30));
+  const fallingCount = Math.max(4, Math.round(groundProgress * 30));
 
   const [prevSeason, setPrevSeason] = useState<Season>(season);
   const [showTransition, setShowTransition] = useState(false);
@@ -245,7 +256,7 @@ export default function SeasonalBackground() {
       {/* Ground layer — fallen elements accumulating, fills up to 100% of screen */}
       <div style={{
         position: "absolute", inset: 0,
-        opacity: Math.min(1, 0.3 + progress * 0.7),
+        opacity: Math.min(1, 0.3 + groundProgress * 0.7),
         transition: "opacity 2s ease",
       }}>
         {groundElements.map((el) => (
