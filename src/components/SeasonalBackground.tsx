@@ -97,11 +97,11 @@ interface GroundElement {
   rotate: number;
 }
 
-const ROW_HEIGHT_VH = 3;     // height of one layer in % of screen height
+const ROW_HEIGHT_VH = 2;     // height of one layer in % of screen height
 
-// Leaves per row depends on screen width so they sit tightly together (~24px apart)
+// Leaves per row depends on screen width — dense packing (~13px apart)
 function leavesPerRowFor(width: number): number {
-  return Math.max(20, Math.round(width / 24));
+  return Math.max(30, Math.round(width / 13));
 }
 
 function generateGroundElements(season: Season, count: number, perRow: number, seed: number): GroundElement[] {
@@ -109,17 +109,18 @@ function generateGroundElements(season: Season, count: number, perRow: number, s
   return Array.from({ length: count }, (_, i) => {
     const row = Math.floor(i / perRow);
     const col = i % perRow;
-    // Stagger every other row like bricks, plus small jitter — tight but natural
+    // Stagger every other row like bricks, plus jitter that keeps leaves
+    // overlapping their neighbours — no visible air gaps
     const stagger = row % 2 === 1 ? 0.5 : 0;
-    const left = ((col + stagger) / perRow) * 100 + (rng(seed, i * 1) - 0.5) * 2;
-    const bottom = row * ROW_HEIGHT_VH + rng(seed, i * 2) * (ROW_HEIGHT_VH * 0.7);
+    const left = ((col + stagger) / perRow) * 100 + (rng(seed, i * 1) - 0.5) * 1.2;
+    const bottom = row * ROW_HEIGHT_VH + rng(seed, i * 2) * (ROW_HEIGHT_VH * 0.9);
     return {
       id: i,
       emoji: emojis[Math.floor(rng(seed, i * 3) * emojis.length)],
       left,
       bottom,
-      size: 18 + rng(seed, i * 4) * 10,
-      opacity: 0.35 + rng(seed, i * 5) * 0.4,
+      size: 20 + rng(seed, i * 4) * 14,
+      opacity: 0.55 + rng(seed, i * 5) * 0.4,
       rotate: rng(seed, i * 6) * 360,
     };
   });
