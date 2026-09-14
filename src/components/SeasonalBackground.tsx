@@ -104,37 +104,61 @@ function leavesPerRowFor(width: number): number {
   return Math.max(30, Math.round(width / 13));
 }
 
-// Hilly terrain profile: 0..1 height per x-position (0=left, 1=right).
-// Two overlapping sine waves + a small wobble = smooth uneven hills,
+// Rolling-drift terrain profile: 0..1 height per x-position (0=left, 1=right).
+// Gentle overlapping waves = soft uneven drifts (no deep dips or bare gaps),
 // fixed per season so the shape stays consistent day to day.
 function hillHeight(x: number, seed: number): number {
   const p1 = rng(seed, 991) * Math.PI * 2;
   const p2 = rng(seed, 992) * Math.PI * 2;
-  const f1 = 1.3 + rng(seed, 993) * 1.2;  // 1–2 big hills across the screen
-  const f2 = 3 + rng(seed, 994) * 2.5;    // a few smaller bumps
-  const h = 0.62 + 0.26 * Math.sin(x * Math.PI * 2 * f1 + p1) + 0.14 * Math.sin(x * Math.PI * 2 * f2 + p2);
-  return Math.min(1, Math.max(0.12, h));
+  const p3 = rng(seed, 995) * Math.PI * 2;
+  const f1 = 0.9 + rng(seed, 993) * 0.8;   // one big slow swell
+  const f2 = 2.2 + rng(seed, 994) * 1.5;   // a couple of medium drifts
+  const f3 = 5 + rng(seed, 996) * 3;       // small ripples on top
+  const h = 0.8 + 0.12 * Math.sin(x * Math.PI * 2 * f1 + p1)
+              + 0.06 * Math.sin(x * Math.PI * 2 * f2 + p2)
+              + 0.03 * Math.sin(x * Math.PI * 2 * f3 + p3);
+  return Math.min(1, Math.max(0.45, h));
 }
 
-function generateGroundElements(season: Season, count: number, perRow: number, seed: number, progress: number): GroundElement[] {
+// Solid carpet: place leaves on a dense grid column by column, filling every
+// column from the bottom up to its own terrain line — no holes, wavy top edge.
+function generateGroundElements(season: Season, perRow: number, seed: number, progress: number): GroundElement[] {
   const emojis = SEASONS[season].ground.filter((e) => e.length <= 2); // exclude color names
-  return Array.from({ length: count }, (_, i) => {
-    // Random x-position (dense scatter, neighbours overlap like real litter)
-    const x = (i % perRow + Math.floor(i / perRow) * 0.5 + rng(seed, i * 1) * 0.9) % 1;
-    const hill = hillHeight(x, seed) * progress;
-    // Bias towards the bottom (rng^0.7) so leaves always look piled at the base,
-    // filling up to the wavy hill line instead of a flat layer
-    const bottom = Math.pow(rng(seed, i * 2), 0.7) * hill * 100;
-    return {
-      id: i,
-      emoji: emojis[Math.floor(rng(seed, i * 3) * emojis.length)],
-      left: x * 100,
-      bottom,
-      size: 20 + rng(seed, i * 4) * 14,
-      opacity: 0.55 + rng(seed, i * 5) * 0.4,
-      rotate: rng(seed, i * 6) * 360,
-    };
-  });
+  const out: GroundElement[] = [];
+  let id = 0;
+  for (let c = 0; c < perRow; c++) {
+    const x = (c + 0.5) / perRow;
+    const topPct = hillHeight(x, seed) * progress * 100;   // pile height at this column, % of screen
+    const rowsHere = Math.ceil(topPct / ROW_HEIGHT_VH);
+    for (let r = 0; r < rowsHere; r++) {
+      const i = id;
+      out.push({
+        id,
+        emoji: emojis[Math.floor(rng(seed, i * 3) * emojis.length)],
+        left: x * 100 + (rng(seed, i * 1) - 0.5) * 1.6,     // horizontal jitter, neighbours overlap
+        bottom: Math.min(r * ROW_HEIGHT_VH + rng(seed, i * 2) * ROW_HEIGHT_VH, topPct),
+        size: 20 + rng(seed, i * 4) * 14,
+        opacity: 0.55 + rng(seed, i * 5) * 0.4,
+        rotate: rng(seed, i * 6) * 360,
+      });
+      id++;
+    }
+    // Sparse fringe above the drift line: a few loose leaves soften the edge
+    if (progress > 0.05 && rng(seed, 700 + c) < 0.45) {
+      const i = id;
+      out.push({
+        id,
+        emoji: emojis[Math.floor(rng(seed, i * 3) * emojis.length)],
+        left: x * 100 + (rng(seed, i * 1) - 0.5) * 2.2,
+        bottom: topPct + rng(seed, i * 2) * ROW_HEIGHT_VH * 1.2,
+        size: 14 + rng(seed, i * 4) * 10,
+        opacity: 0.35 + rng(seed, i * 5) * 0.3,
+        rotate: rng(seed, i * 6) * 360,
+      });
+      id++;
+    }
+  }
+  return out;
 }
 
 // Transition overlay
@@ -186,15 +210,11 @@ export default function SeasonalBackground() {
   }, []);
 
   const perRow = leavesPerRowFor(screen.w);
-  // Enough elements to densely cover the hilly area (up to ~100% screen height)
-  const maxTotal = perRow * Math.ceil(100 / ROW_HEIGHT_VH);
-  // Ground elements count: 0 at season start → full hilly carpet at end
-  const groundCount = Math.max(2, Math.round(groundProgress * maxTotal));
   const seed = now.getFullYear() * 12 + month;
 
   const groundElements = useMemo(
-    () => generateGroundElements(season, groundCount, perRow, seed, groundProgress),
-    [season, groundCount, perRow, seed, groundProgress]
+    () => generateGroundElements(season, perRow, seed, groundProgress),
+    [season, perRow, seed, groundProgress]
   );
 
   // Falling particles: more as season progresses
