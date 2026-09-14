@@ -17,7 +17,7 @@ const ADMIN_CODE = Deno.env.get("ADMIN_CODE") ?? "";
 const MAX_USERS = 5;           // registration is closed after the first N accounts
 const MAX_ATTEMPTS = 3;
 const LOCK_MS = 30 * 60 * 1000; // 30 min lockout
-const RATE_LIMIT = 10;          // auth requests per minute per IP
+const RATE_LIMIT = 30;          // auth requests per minute per IP (NAT-friendly)
 const RATE_WINDOW = 60_000;
 const MAX_MEDIA_ITEMS = 10;
 const ALLOWED_MEDIA_TYPES = new Set([
@@ -164,21 +164,24 @@ Deno.serve(async (req) => {
     return json({ url: `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/media/${path}` });
   }
 
-  // --- auth routes ---
-  if (tooFast(addr)) return json({ error: "Слишком много запросов. Подождите минуту." }, 429);
-  const lockMin = locked(addr);
-  if (lockMin > 0) return json({ error: `Слишком много попыток. Повторите через ${lockMin} мин.` }, 429);
-
+  // --- auth routes: register / login (rate-limit + per-name lockout) ---
   if (route === "auth/register" || route === "auth/login") {
     const name = String(body.name ?? "").trim();
     const code = String(body.code ?? "").trim();
+    // Lockouts/fail-counts are keyed per IP+name, so one person mistyping the
+    // code on a shared school/carrier NAT never locks everybody else out.
+    const guardKey = `${addr}::${name.toLowerCase()}`;
+    if (tooFast(addr)) return json({ error: "Слишком много запросов. Подождите минуту." }, 429);
+    const lockMin = locked(guardKey);
+    if (lockMin > 0) return json({ error: `Слишком много попыток для этого имени. Повторите через ${lockMin} мин.` }, 429);
     if (!ADMIN_CODE || code !== ADMIN_CODE) {
-      recordFail(addr);
+      recordFail(guardKey);
       return json({ error: route === "auth/register" ? "Неверный код доступа." : "Неверное имя или код доступа." }, 401);
     }
     if (name.length < 2 || name.length > 50) return json({ error: "Имя должно быть от 2 до 50 символов." }, 400);
 
-    const existing = await admin.from("users").select("*").eq("name", name).maybeSingle();
+    // case-insensitive lookup: "системный администратор" finds "Системный администратор"
+    const existing = await admin.from("users").select("*").ilike("name", name).maybeSingle();
     if (route === "auth/register") {
       if (existing.data) return json({ error: "Пользователь с таким именем уже существует." }, 400);
       const count = await admin.from("users").select("id", { count: "exact", head: true });
@@ -191,14 +194,14 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400);
       const token = newToken();
       await admin.from("sessions").insert({ token, user_id: user.id });
-      fails.delete(addr);
+      fails.delete(guardKey);
       return json({ token, name: user.name, role });
     }
     // login
-    if (!existing.data) { recordFail(addr); return json({ error: "Неверное имя или код доступа." }, 401); }
+    if (!existing.data) { recordFail(guardKey); return json({ error: "Неверное имя или код доступа." }, 401); }
     const token = newToken();
     await admin.from("sessions").insert({ token, user_id: existing.data.id });
-    fails.delete(addr);
+    fails.delete(guardKey);
     return json({ token, name: existing.data.name, role: existing.data.role });
   }
 
