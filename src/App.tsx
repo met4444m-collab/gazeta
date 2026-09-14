@@ -6,14 +6,21 @@ import NewsFeed from "./components/NewsFeed";
 import AdminPanel from "./components/AdminPanel";
 import NewsEditor from "./components/NewsEditor";
 
-// Adapt the Supabase row to the shape NewsFeed expects (created with Convex ids)
+// Adapt the Supabase row to the shape NewsFeed expects
 function toFeedPost(n: NewsPost) {
+  // new posts carry a media[] array; fall back to the old single-image/video columns
+  const media = (n.media && n.media.length
+    ? n.media
+    : [
+        ...(n.image_url ? [{ type: "image", url: n.image_url }] : []),
+        ...(n.video_url ? [{ type: "video", url: n.video_url }] : []),
+      ]
+  ).filter((m) => m && m.url);
   return {
     _id: n.id,
     title: n.title,
     body: n.body,
-    imageUrl: n.image_url ?? undefined,
-    videoUrl: n.video_url ?? undefined,
+    media: media as { type: string; url: string }[],
     authorName: n.author_name,
     createdAt: new Date(n.created_at).getTime(),
   };

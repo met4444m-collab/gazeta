@@ -28,6 +28,7 @@ export interface NewsPost {
   body: string;
   image_url: string | null;
   video_url: string | null;
+  media: { type: string; url: string }[] | null;
   author_name: string;
   created_at: string;
 }
@@ -67,8 +68,28 @@ export const login = (name: string, code: string) => callFn("auth/login", { name
 export const me = (token: string) => callFn("auth/me", { token });
 export const logout = (token: string) => callFn("auth/logout", { token });
 
-export const createNews = (token: string, p: { title: string; body: string; imageUrl?: string; videoUrl?: string }) =>
+export const createNews = (token: string, p: { title: string; body: string; media?: { type: string; url: string }[] }) =>
   callFn("news/create", { token, ...p });
-export const updateNews = (token: string, id: string, p: { title: string; body: string; imageUrl?: string; videoUrl?: string }) =>
+export const updateNews = (token: string, id: string, p: { title: string; body: string; media?: { type: string; url: string }[] }) =>
   callFn("news/update", { token, id, ...p });
 export const removeNews = (token: string, id: string) => callFn("news/remove", { token, id });
+
+// ---- Media upload (token-auth, goes through the Edge Function) ----
+const MAX_UPLOAD_BYTES = 30 * 1024 * 1024;
+const ALLOWED_UPLOAD_TYPES = new Set([
+  "image/jpeg", "image/png", "image/webp", "image/gif",
+  "video/mp4", "video/webm", "video/quicktime",
+]);
+
+export async function uploadFile(token: string, file: File): Promise<{ type: string; url: string }> {
+  const type = file.type || "application/octet-stream";
+  if (!ALLOWED_UPLOAD_TYPES.has(type)) throw new Error("Поддерживаются фото (JPEG/PNG/WebP/GIF) и видео (MP4/WebM/MOV).");
+  if (file.size > MAX_UPLOAD_BYTES) throw new Error("Файл больше 30 МБ — сожмите его.");
+  const data: string = await new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = () => resolve(String(reader.result).split(",")[1] ?? "");
+    reader.onerror = () => reject(new Error("Не удалось прочитать файл."));
+    reader.readAsDataURL(file);
+  });
+  return callFn("media/upload", { token, type, data });
+}

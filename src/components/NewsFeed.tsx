@@ -1,11 +1,15 @@
 import { useState } from "react";
 
+interface MediaItem {
+  type: string;
+  url: string;
+}
+
 interface NewsPost {
   _id: string;
   title: string;
   body: string;
-  imageUrl?: string;
-  videoUrl?: string;
+  media: MediaItem[];
   authorName: string;
   createdAt: number;
 }
@@ -38,6 +42,47 @@ function timeAgo(ts: number): string {
   return new Date(ts).toLocaleDateString("ru-RU", { day: "numeric", month: "short" });
 }
 
+// A single media block — direct file (image/video) or an embed for YouTube/VK links
+function MediaBlock({ item }: { item: MediaItem }) {
+  const yt = item.type === "video" ? getYouTubeEmbed(item.url) : null;
+  const vk = item.type === "video" ? getVKEmbed(item.url) : null;
+
+  if (yt) {
+    return (
+      <div className="media-frame">
+        <iframe src={yt} style={{ width: "100%", aspectRatio: "16/9", border: "none" }} allow="autoplay; encrypted-media" allowFullScreen loading="lazy" title="Видео" />
+      </div>
+    );
+  }
+  if (vk) {
+    return (
+      <div className="media-frame">
+        <iframe src={vk} style={{ width: "100%", aspectRatio: "16/9", border: "none" }} allow="autoplay; encrypted-media; fullscreen; picture-in-picture" allowFullScreen loading="lazy" title="Видео" />
+      </div>
+    );
+  }
+  if (item.type === "video" && /\.(mp4|webm|mov)($|\?)/i.test(item.url)) {
+    return (
+      <div className="media-frame">
+        <video src={item.url} controls preload="metadata" style={{ width: "100%", maxHeight: 380, display: "block", borderRadius: 10, background: "#000" }} />
+      </div>
+    );
+  }
+  if (item.type === "image") {
+    return (
+      <div className="media-frame">
+        <img src={item.url} alt="" loading="lazy" decoding="async" style={{ width: "100%", maxHeight: 420, objectFit: "cover", display: "block", borderRadius: 10 }} />
+      </div>
+    );
+  }
+  // Unknown video link — show a clickable link instead of a broken embed
+  return (
+    <a href={item.url} target="_blank" rel="noreferrer" className="media-frame" style={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 8, padding: 14, color: "var(--accent)", fontSize: 13, textDecoration: "none" }}>
+      🎬 Смотреть видео
+    </a>
+  );
+}
+
 function NewsCard({ post, publisherName, onEdit, onDelete }: {
   post: NewsPost;
   publisherName: string | null;
@@ -45,71 +90,50 @@ function NewsCard({ post, publisherName, onEdit, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const isLong = post.body.length > 400;
-  const text = expanded || !isLong ? post.body : post.body.slice(0, 400) + "…";
-
-  const videoEmbed = post.videoUrl
-    ? getYouTubeEmbed(post.videoUrl) || getVKEmbed(post.videoUrl)
-    : null;
+  const hasBody = post.body.trim().length > 0;
 
   return (
-    <article className="glass p-4 sm:p-5" style={{ width: "100%" }}>
+    <article className="glass news-card">
       {/* Author row */}
-      <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 12 }}>
+      <div className="news-meta">
         <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <div style={{
-            width: 28, height: 28, borderRadius: "50%",
-            background: "rgba(108, 159, 255, 0.15)",
-            display: "flex", alignItems: "center", justifyContent: "center",
-            fontSize: 12, fontWeight: 700, color: "var(--accent)"
-          }}>
-            {post.authorName.charAt(0).toUpperCase()}
-          </div>
-          <span style={{ fontSize: 14, fontWeight: 500, color: "var(--text-primary)" }}>
-            {post.authorName}
-          </span>
+          <div className="news-avatar">{post.authorName.charAt(0).toUpperCase()}</div>
+          <span className="news-author">{post.authorName}</span>
         </div>
-        <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
-          <time style={{ fontSize: 12, color: "var(--text-secondary)" }}>
-            {timeAgo(post.createdAt)}
-          </time>
+        <div style={{ display: "flex", alignItems: "center", gap: 10 }}>
+          <time className="news-time">{timeAgo(post.createdAt)}</time>
           {publisherName && (
             <>
-              <button onClick={() => onEdit(post)} style={{ fontSize: 12, color: "var(--text-secondary)", cursor: "pointer", background: "none", border: "none" }} title="Ред.">✏️</button>
-              <button onClick={() => { if (confirm("Удалить?")) onDelete(post._id); }} style={{ fontSize: 12, color: "var(--text-secondary)", cursor: "pointer", background: "none", border: "none" }}>🗑</button>
+              <button onClick={() => onEdit(post)} className="news-action" title="Редактировать">✏️</button>
+              <button onClick={() => { if (confirm("Удалить эту новость?")) onDelete(post._id); }} className="news-action" title="Удалить">🗑</button>
             </>
           )}
         </div>
       </div>
 
       {/* Title */}
-      <h3 style={{ fontSize: 16, fontWeight: 700, color: "var(--text-primary)", marginBottom: 8, lineHeight: 1.3 }}>
-        {post.title}
-      </h3>
+      <h3 className="news-title">{post.title}</h3>
 
-      {/* Image */}
-      {post.imageUrl && (
-        <img src={post.imageUrl} alt="" style={{ width: "100%", borderRadius: 8, marginBottom: 12, maxHeight: 320, objectFit: "cover" }} loading="lazy" />
-      )}
-
-      {/* Video */}
-      {videoEmbed && (
-        <div style={{ marginBottom: 12, borderRadius: 8, overflow: "hidden" }}>
-          <iframe src={videoEmbed} style={{ width: "100%", aspectRatio: "16/9" }} allow="autoplay; encrypted-media" allowFullScreen loading="lazy" />
+      {/* Media: first item big, the rest in a grid */}
+      {post.media.length > 0 && (
+        <div className="media-grid" style={{ gridTemplateColumns: post.media.length === 1 ? "1fr" : "1fr 1fr" }}>
+          {post.media.map((m, i) => (
+            <MediaBlock key={i} item={m} />
+          ))}
         </div>
       )}
 
-      {/* Body */}
-      <p style={{ fontSize: 14, color: "var(--text-secondary)", lineHeight: 1.6, whiteSpace: "pre-wrap" }}>
-        {text}
-      </p>
-      {isLong && (
-        <button
-          onClick={() => setExpanded(!expanded)}
-          style={{ fontSize: 12, color: "var(--accent)", background: "none", border: "none", cursor: "pointer", marginTop: 4, fontWeight: 500 }}
-        >
-          {expanded ? "Свернуть" : "Ещё"}
-        </button>
+      {/* Collapsible article text */}
+      {hasBody && (
+        <>
+          <button onClick={() => setExpanded(!expanded)} className="expand-btn" aria-expanded={expanded}>
+            <span className="expand-arrow" style={{ transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.25s ease" }}>»</span>
+            <span>{expanded ? "Свернуть статью" : "Читать статью"}</span>
+          </button>
+          <div className="news-body" style={{ display: expanded ? "block" : "none" }}>
+            <p style={{ whiteSpace: "pre-wrap" }}>{post.body}</p>
+          </div>
+        </>
       )}
     </article>
   );
@@ -118,34 +142,70 @@ function NewsCard({ post, publisherName, onEdit, onDelete }: {
 export default function NewsFeed({ publisherName, onEdit, onDelete, onNewPost, posts, loading }: NewsFeedProps) {
   return (
     <div style={{ position: "relative", zIndex: 10, width: "100%", maxWidth: 640, margin: "0 auto", padding: "0 16px" }}>
-      {/* New post button */}
       {publisherName && (
         <button
           onClick={onNewPost}
-          className="glass"
-          style={{
-            width: "100%", padding: "12px 16px", marginBottom: 12,
-            display: "flex", alignItems: "center", justifyContent: "center", gap: 8,
-            color: "var(--accent)", fontSize: 14, fontWeight: 500,
-            cursor: "pointer", borderRadius: 12
-          }}
+          className="glass new-post-btn"
         >
           + Написать новость
         </button>
       )}
 
-      {/* Posts */}
-      <div style={{ display: "flex", flexDirection: "column", gap: 12, paddingTop: 8 }}>
+      <div className="feed-list">
         {posts.map((post) => (
           <NewsCard key={post._id} post={post} publisherName={publisherName} onEdit={onEdit} onDelete={onDelete} />
         ))}
 
+        {loading && posts.length === 0 && (
+          <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-secondary)", fontSize: 14 }}>Загрузка…</p>
+        )}
         {!loading && posts.length === 0 && (
           <p style={{ textAlign: "center", padding: "48px 0", color: "var(--text-secondary)", fontSize: 14 }}>
             Новостей пока что нет
           </p>
         )}
       </div>
+
+      <style>{`
+        .news-card { width: 100%; padding: 16px; border-radius: 14px; }
+        .news-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
+        .news-avatar {
+          width: 30px; height: 30px; border-radius: 50%;
+          background: rgba(108, 159, 255, 0.15);
+          display: flex; align-items: center; justify-content: center;
+          font-size: 13px; font-weight: 700; color: var(--accent);
+        }
+        .news-author { font-size: 14px; font-weight: 500; color: var(--text-primary); }
+        .news-time { font-size: 12px; color: var(--text-secondary); }
+        .news-action { font-size: 13px; color: var(--text-secondary); cursor: pointer; background: none; border: none; padding: 2px 4px; border-radius: 6px; transition: background 0.15s; }
+        .news-action:hover { background: rgba(255,255,255,0.08); }
+        .news-title {
+          font-size: 18px; font-weight: 700; color: var(--text-primary);
+          margin: 0 0 12px; line-height: 1.35; letter-spacing: 0.01em;
+        }
+        .media-grid { display: grid; gap: 8px; margin-bottom: 12px; }
+        .media-frame { margin: 0; border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+        .expand-btn {
+          display: flex; align-items: center; gap: 8px;
+          width: 100%; padding: 9px 12px; margin-top: 2px;
+          background: rgba(108,159,255,0.08);
+          border: 1px solid rgba(108,159,255,0.18);
+          border-radius: 10px; cursor: pointer;
+          color: var(--accent); font-size: 13px; font-weight: 600;
+          transition: background 0.15s;
+        }
+        .expand-btn:hover { background: rgba(108,159,255,0.14); }
+        .expand-arrow { font-size: 17px; line-height: 1; }
+        .news-body { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .news-body p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
+        .new-post-btn {
+          width: 100%; padding: 12px 16px; margin-bottom: 12px;
+          display: flex; align-items: center; justify-content: center; gap: 8px;
+          color: var(--accent); font-size: 14px; font-weight: 500;
+          cursor: pointer; border-radius: 12px; border: none;
+        }
+        .feed-list { display: flex; flex-direction: column; gap: 12px; padding-top: 8px; }
+      `}</style>
     </div>
   );
 }

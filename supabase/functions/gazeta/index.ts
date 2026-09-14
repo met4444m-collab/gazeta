@@ -19,6 +19,12 @@ const MAX_ATTEMPTS = 3;
 const LOCK_MS = 30 * 60 * 1000; // 30 min lockout
 const RATE_LIMIT = 10;          // auth requests per minute per IP
 const RATE_WINDOW = 60_000;
+const MAX_MEDIA_ITEMS = 10;
+const ALLOWED_MEDIA_TYPES = new Set([
+  "image/jpeg", "image/png", "image/webp", "image/gif",
+  "video/mp4", "video/webm", "video/quicktime",
+]);
+const MAX_UPLOAD_BYTES = 30 * 1024 * 1024; // 30 MB after base64 decoding
 
 const admin = createClient(
   Deno.env.get("SUPABASE_URL")!,
@@ -59,6 +65,15 @@ async function userByToken(token: string) {
   return (data as any)?.users ?? null;
 }
 
+// Validate a media array coming from the client: [{ type: 'image'|'video', url }]
+function sanitizeMedia(raw: any): { type: string; url: string }[] {
+  if (!Array.isArray(raw)) return [];
+  return raw
+    .slice(0, MAX_MEDIA_ITEMS)
+    .map((m: any) => ({ type: m?.type === "video" ? "video" : "image", url: String(m?.url ?? "").slice(0, 2000) }))
+    .filter((m) => /^https:\/\//.test(m.url));
+}
+
 const json = (body: any, status = 200) =>
   new Response(JSON.stringify(body), { status, headers: { "Content-Type": "application/json", "Access-Control-Allow-Origin": "*" } });
 
@@ -77,11 +92,15 @@ Deno.serve(async (req) => {
     const user = await userByToken(String(body.token ?? ""));
     if (!user) return json({ error: "Требуется вход." }, 401);
     if (route === "news/create") {
+      const media = sanitizeMedia(body.media);
+      const firstImg = media.find((m: any) => m.type === "image")?.url ?? null;
+      const firstVid = media.find((m: any) => m.type === "video")?.url ?? null;
       const { data, error } = await admin.from("news").insert({
         title: String(body.title ?? "").trim().slice(0, 200),
         body: String(body.body ?? "").trim().slice(0, 10000),
-        image_url: body.imageUrl ? String(body.imageUrl) : null,
-        video_url: body.videoUrl ? String(body.videoUrl) : null,
+        media,
+        image_url: firstImg,
+        video_url: firstVid,
         author_name: user.name,
       }).select().single();
       if (error) return json({ error: error.message }, 400);
@@ -98,8 +117,12 @@ Deno.serve(async (req) => {
         title: String(body.title ?? "").trim().slice(0, 200),
         body: String(body.body ?? "").trim().slice(0, 10000),
       };
-      if (body.imageUrl !== undefined) patch.image_url = body.imageUrl ? String(body.imageUrl) : null;
-      if (body.videoUrl !== undefined) patch.video_url = body.videoUrl ? String(body.videoUrl) : null;
+      if (body.media !== undefined) {
+        const media = sanitizeMedia(body.media);
+        patch.media = media;
+        patch.image_url = media.find((m: any) => m.type === "image")?.url ?? null;
+        patch.video_url = media.find((m: any) => m.type === "video")?.url ?? null;
+      }
       const { data, error } = await admin.from("news").update(patch).eq("id", body.id).select().single();
       if (error) return json({ error: error.message }, 400);
       return json(data);
@@ -115,6 +138,30 @@ Deno.serve(async (req) => {
       if (error) return json({ error: error.message }, 400);
       return json({});
     }
+  }
+
+  // --- media upload (publisher-only): base64 in, public storage URL out ---
+  if (route === "media/upload") {
+    const user = await userByToken(String(body.token ?? ""));
+    if (!user) return json({ error: "Требуется вход." }, 401);
+    const type = String(body.type ?? "");
+    if (!ALLOWED_MEDIA_TYPES.has(type)) return json({ error: "Неподдерживаемый тип файла." }, 400);
+    const data64 = String(body.data ?? "");
+    if (data64.length > MAX_UPLOAD_BYTES * 1.4) return json({ error: "Файл слишком большой (максимум 30 МБ)." }, 413);
+    let bytes: Uint8Array;
+    try {
+      const bin = atob(data64);
+      bytes = new Uint8Array(bin.length);
+      for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    } catch {
+      return json({ error: "Повреждённый файл." }, 400);
+    }
+    if (bytes.length > MAX_UPLOAD_BYTES) return json({ error: "Файл слишком большой (максимум 30 МБ)." }, 413);
+    const ext = type.split("/")[1].replace("quicktime", "mov");
+    const path = `${crypto.randomUUID()}.${ext}`;
+    const { error } = await admin.storage.from("media").upload(path, bytes, { contentType: type, upsert: false });
+    if (error) return json({ error: "Не удалось загрузить файл." }, 500);
+    return json({ url: `${Deno.env.get("SUPABASE_URL")}/storage/v1/object/public/media/${path}` });
   }
 
   // --- auth routes ---
