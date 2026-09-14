@@ -101,7 +101,7 @@ const ROW_HEIGHT_VH = 2;     // nominal layer height in % of screen height
 
 // Leaves per row depends on screen width — dense packing (~13px apart)
 function leavesPerRowFor(width: number): number {
-  return Math.max(30, Math.round(width / 13));
+  return Math.max(24, Math.round(width / 22));
 }
 
 // Rolling-drift terrain profile: 0..1 height per x-position (0=left, 1=right).
@@ -137,8 +137,8 @@ function generateGroundElements(season: Season, perRow: number, seed: number, pr
         emoji: emojis[Math.floor(rng(seed, i * 3) * emojis.length)],
         left: x * 100 + (rng(seed, i * 1) - 0.5) * 1.6,     // horizontal jitter, neighbours overlap
         bottom: Math.min(r * ROW_HEIGHT_VH + rng(seed, i * 2) * ROW_HEIGHT_VH, topPct),
-        size: 20 + rng(seed, i * 4) * 14,
-        opacity: 0.55 + rng(seed, i * 5) * 0.4,
+        size: 22 + rng(seed, i * 4) * 16,
+        opacity: 0.7 + rng(seed, i * 5) * 0.3,
         rotate: rng(seed, i * 6) * 360,
       });
       id++;
@@ -217,8 +217,9 @@ export default function SeasonalBackground() {
     [season, perRow, seed, groundProgress]
   );
 
-  // Falling particles: more as season progresses
-  const fallingCount = Math.max(4, Math.round(groundProgress * 30));
+  // Falling particles: more as season progresses (capped — hundreds of animated
+  // spans can crash weak phones)
+  const fallingCount = Math.max(3, Math.round(groundProgress * 14));
 
   const [prevSeason, setPrevSeason] = useState<Season>(season);
   const [showTransition, setShowTransition] = useState(false);

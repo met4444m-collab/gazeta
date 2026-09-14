@@ -2,12 +2,53 @@
 <html lang="ru">
   <head>
     <meta charset="UTF-8" />
-    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>Лицей 12 — Газета</title>
+    <style>
+      #root:empty::after {
+        content: "Загрузка…";
+        display: flex; align-items: center; justify-content: center;
+        height: 100vh; color: #8888a0; font-family: system-ui, sans-serif; font-size: 14px;
+      }
+      #crash-report {
+        display: none; position: fixed; inset: 0; z-index: 9999;
+        background: #0a0a12; color: #e8e8f0; padding: 24px;
+        font-family: system-ui, sans-serif; overflow: auto;
+      }
+      #crash-report h2 { font-size: 16px; margin: 0 0 12px; }
+      #crash-report pre {
+        white-space: pre-wrap; word-break: break-word; font-size: 12px;
+        color: #ff8b8b; background: rgba(255,255,255,0.05); padding: 12px; border-radius: 8px;
+      }
+    </style>
   </head>
   <body>
     <div id="root"></div>
+    <div id="crash-report">
+      <h2>⚠️ Ошибка на странице</h2>
+      <pre id="crash-text"></pre>
+    </div>
+    <script>
+      // Surface any crash on-screen (instead of a silent reload loop) and keep
+      // the site usable: the app still renders — the report is over it.
+      window.addEventListener("error", function (e) {
+        var box = document.getElementById("crash-report");
+        var txt = document.getElementById("crash-text");
+        if (box && txt) {
+          txt.textContent = (e.message || "Ошибка") + "\n" + (e.filename || "") + ":" + (e.lineno || "");
+          box.style.display = "block";
+        }
+      });
+      window.addEventListener("unhandledrejection", function (e) {
+        var box = document.getElementById("crash-report");
+        var txt = document.getElementById("crash-text");
+        if (box && txt) {
+          txt.textContent = "Ошибка сети/кодa: " + (e.reason && (e.reason.message || e.reason) || "неизвестно");
+          box.style.display = "block";
+        }
+      });
+    </script>
     <script type="module" src="/src/main.tsx"></script>
   </body>
 </html>
