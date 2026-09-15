@@ -89,17 +89,17 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
         tabIndex={-1}
       />
       {isOpen && (
-      <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", padding: 16 }}>
+      <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "center", justifyContent: "center", background: "rgba(80,65,45,0.35)", backdropFilter: "blur(8px)", padding: 16 }}>
       <div className="glass-strong" style={{ width: "100%", maxWidth: 360, padding: 24, borderRadius: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 20 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#e8e8f0" }}>🔐 Доступ</h2>
-          <button onClick={() => { setIsOpen(false); setError(""); }} style={{ background: "none", border: "none", color: "#8888a0", fontSize: 20, cursor: "pointer" }}>×</button>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#2b2620" }}>🔐 Доступ</h2>
+          <button onClick={() => { setIsOpen(false); setError(""); }} style={{ background: "none", border: "none", color: "#8a8378", fontSize: 20, cursor: "pointer" }}>×</button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
-          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ваше имя" required minLength={2} style={{ width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "#e8e8f0", fontSize: 14, outline: "none" }} />
-          <input type="password" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Код доступа" required style={{ width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "#e8e8f0", fontSize: 14, outline: "none", fontFamily: "monospace" }} />
-          {error && <p style={{ color: "#ff6b6b", fontSize: 12 }}>{error}</p>}
-          <button type="submit" disabled={!code || !name || loading} style={{ width: "100%", padding: "10px 0", background: "rgba(108,159,255,0.15)", color: "#6c9fff", fontWeight: 500, border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer", opacity: (!code || !name || loading) ? 0.4 : 1 }}>
+          <input type="text" value={name} onChange={(e) => setName(e.target.value)} placeholder="Ваше имя" required minLength={2} style={{ width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.6)", border: "1px solid rgba(60,50,35,0.15)", borderRadius: 8, color: "#2b2620", fontSize: 14, outline: "none" }} />
+          <input type="password" value={code} onChange={(e) => setCode(e.target.value)} placeholder="Код доступа" required style={{ width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.6)", border: "1px solid rgba(60,50,35,0.15)", borderRadius: 8, color: "#2b2620", fontSize: 14, outline: "none", fontFamily: "monospace" }} />
+          {error && <p style={{ color: "#d64545", fontSize: 12 }}>{error}</p>}
+          <button type="submit" disabled={!code || !name || loading} style={{ width: "100%", padding: "10px 0", background: "rgba(184,100,31,0.12)", color: "#b8641f", fontWeight: 500, border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer", opacity: (!code || !name || loading) ? 0.4 : 1 }}>
             {loading ? "⏳ Проверяю..." : "Войти"}
           </button>
         </form>
