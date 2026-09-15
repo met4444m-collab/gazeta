@@ -47,7 +47,7 @@ export default function NewsEditor({ onCreated, onCancel, editPost }: NewsEditor
   const fileRef = useRef<HTMLInputElement>(null);
   const isEditing = !!editPost;
 
-  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.05)", border: "1px solid rgba(255,255,255,0.12)", borderRadius: 8, color: "#e8e8f0", fontSize: 14, outline: "none" };
+  const inputStyle: React.CSSProperties = { width: "100%", padding: "10px 12px", background: "rgba(255,255,255,0.6)", border: "1px solid rgba(60,50,35,0.15)", borderRadius: 8, color: "#2b2620", fontSize: 14, outline: "none" };
 
   const addFiles = async (files: FileList | null) => {
     if (!files || !files.length) return;
@@ -117,49 +117,49 @@ export default function NewsEditor({ onCreated, onCancel, editPost }: NewsEditor
   const uploadingCount = media.filter((m) => m.status === "uploading").length;
 
   return (
-    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", background: "rgba(0,0,0,0.6)", backdropFilter: "blur(8px)", overflowY: "auto", padding: "48px 16px" }}>
+    <div style={{ position: "fixed", inset: 0, zIndex: 100, display: "flex", alignItems: "flex-start", justifyContent: "center", background: "rgba(80,65,45,0.35)", backdropFilter: "blur(8px)", overflowY: "auto", padding: "48px 16px" }}>
       <div className="glass-strong" style={{ width: "100%", maxWidth: 520, padding: 20, borderRadius: 16 }}>
         <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center", marginBottom: 16 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#e8e8f0" }}>{isEditing ? "✏️ Редактировать" : "📝 Новая новость"}</h2>
-          <button onClick={onCancel} style={{ background: "none", border: "none", color: "#8888a0", fontSize: 20, cursor: "pointer" }}>×</button>
+          <h2 style={{ fontSize: 18, fontWeight: 700, color: "#2b2620" }}>{isEditing ? "✏️ Редактировать" : "📝 Новая новость"}</h2>
+          <button onClick={onCancel} style={{ background: "none", border: "none", color: "#8a8378", fontSize: 20, cursor: "pointer" }}>×</button>
         </div>
         <form onSubmit={handleSubmit} style={{ display: "flex", flexDirection: "column", gap: 10 }}>
           <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} placeholder="Заголовок" required maxLength={200} style={inputStyle} />
           <textarea value={body} onChange={(e) => setBody(e.target.value)} placeholder="Текст новости..." required rows={5} maxLength={10000} style={{ ...inputStyle, resize: "vertical" }} />
 
           {/* Media attach zone */}
-          <div style={{ border: "1px dashed rgba(255,255,255,0.18)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
+          <div style={{ border: "1px dashed rgba(60,50,35,0.25)", borderRadius: 10, padding: 12, display: "flex", flexDirection: "column", gap: 10 }}>
             <div style={{ display: "flex", gap: 8 }}>
-              <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || media.length >= 10} style={{ flex: 1, padding: "10px 0", background: "rgba(108,159,255,0.12)", border: "none", color: "#6c9fff", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", opacity: busy || media.length >= 10 ? 0.5 : 1 }}>
+              <button type="button" onClick={() => fileRef.current?.click()} disabled={busy || media.length >= 10} style={{ flex: 1, padding: "10px 0", background: "rgba(184,100,31,0.1)", border: "none", color: "#b8641f", borderRadius: 8, fontSize: 13, fontWeight: 500, cursor: "pointer", opacity: busy || media.length >= 10 ? 0.5 : 1 }}>
                 📎 Фото/видео с устройства ({media.length}/10)
               </button>
             </div>
             <input ref={fileRef} type="file" accept="image/jpeg,image/png,image/webp,image/gif,video/mp4,video/webm,video/quicktime" multiple hidden onChange={(e) => addFiles(e.target.files)} />
             {media.map((m, i) => (
-              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(255,255,255,0.04)", borderRadius: 8, padding: 8 }}>
+              <div key={i} style={{ display: "flex", alignItems: "center", gap: 10, background: "rgba(60,50,35,0.05)", borderRadius: 8, padding: 8 }}>
                 {m.status === "uploading" ? (
                   <div style={{ width: 56, height: 42, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18 }}>⏳</div>
                 ) : m.type === "image" ? (
                   <img src={m.url} alt="" style={{ width: 56, height: 42, objectFit: "cover", borderRadius: 6 }} />
                 ) : (
-                  <div style={{ width: 56, height: 42, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: "rgba(108,159,255,0.1)" }}>🎬</div>
+                  <div style={{ width: 56, height: 42, borderRadius: 6, display: "flex", alignItems: "center", justifyContent: "center", fontSize: 18, background: "rgba(184,100,31,0.1)" }}>🎬</div>
                 )}
-                <span style={{ flex: 1, fontSize: 12, color: m.status === "uploading" ? "#6c9fff" : "#8888a0", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
+                <span style={{ flex: 1, fontSize: 12, color: m.status === "uploading" ? "#b8641f" : "#8a8378", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
                   {m.status === "uploading" ? `Загрузка: ${m.name}` : m.type === "video" ? "Видео" : "Фото"}
                 </span>
-                <button type="button" onClick={() => setMedia((prev) => prev.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#ff6b6b", fontSize: 14, cursor: "pointer" }}>✕</button>
+                <button type="button" onClick={() => setMedia((prev) => prev.filter((_, j) => j !== i))} style={{ background: "none", border: "none", color: "#d64545", fontSize: 14, cursor: "pointer" }}>✕</button>
               </div>
             ))}
             <input type="url" value={mediaUrl} onChange={(e) => setMediaUrl(e.target.value)} placeholder="…или вставьте ссылку (фото / YouTube / VK)" style={{ ...inputStyle, fontSize: 13 }} />
-            <button type="button" onClick={addMediaUrl} disabled={!mediaUrl.trim() || media.length >= 10} style={{ alignSelf: "flex-start", padding: "6px 14px", background: "none", border: "1px solid rgba(255,255,255,0.15)", color: "#8888a0", borderRadius: 8, fontSize: 12, cursor: "pointer" }}>
+            <button type="button" onClick={addMediaUrl} disabled={!mediaUrl.trim() || media.length >= 10} style={{ alignSelf: "flex-start", padding: "6px 14px", background: "none", border: "1px solid rgba(60,50,35,0.18)", color: "#8a8378", borderRadius: 8, fontSize: 12, cursor: "pointer" }}>
               + Добавить по ссылке
             </button>
           </div>
 
-          {error && <p style={{ color: "#ff6b6b", fontSize: 12 }}>{error}</p>}
+          {error && <p style={{ color: "#d64545", fontSize: 12 }}>{error}</p>}
           <div style={{ display: "flex", gap: 8, paddingTop: 4 }}>
-            <button type="button" onClick={onCancel} style={{ flex: 1, padding: "10px 0", border: "1px solid rgba(255,255,255,0.12)", background: "none", color: "#8888a0", borderRadius: 8, fontSize: 14, cursor: "pointer" }}>Отмена</button>
-            <button type="submit" disabled={!title.trim() || !body.trim() || busy || uploadingCount > 0} style={{ flex: 1, padding: "10px 0", background: "rgba(108,159,255,0.15)", color: "#6c9fff", fontWeight: 500, border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer", opacity: (!title.trim() || !body.trim() || busy || uploadingCount > 0) ? 0.4 : 1 }}>
+            <button type="button" onClick={onCancel} style={{ flex: 1, padding: "10px 0", border: "1px solid rgba(60,50,35,0.15)", background: "none", color: "#8a8378", borderRadius: 8, fontSize: 14, cursor: "pointer" }}>Отмена</button>
+            <button type="submit" disabled={!title.trim() || !body.trim() || busy || uploadingCount > 0} style={{ flex: 1, padding: "10px 0", background: "rgba(184,100,31,0.14)", color: "#b8641f", fontWeight: 500, border: "none", borderRadius: 8, fontSize: 14, cursor: "pointer", opacity: (!title.trim() || !body.trim() || busy || uploadingCount > 0) ? 0.4 : 1 }}>
               {busy ? "..." : isEditing ? "Обновить" : "Опубликовать"}
             </button>
           </div>
