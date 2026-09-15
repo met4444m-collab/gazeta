@@ -1,16 +1,16 @@
 @import "tailwindcss";
 
-/* Custom colors via CSS variables */
+/* Custom colors via CSS variables — light theme */
 :root {
-  --glass: rgba(255, 255, 255, 0.06);
-  --glass-border: rgba(255, 255, 255, 0.12);
-  --glass-hover: rgba(255, 255, 255, 0.1);
-  --surface: rgba(20, 20, 28, 0.9);
-  --text-primary: #e8e8f0;
-  --text-secondary: #8888a0;
-  --accent: #6c9fff;
-  --accent-glow: rgba(108, 159, 255, 0.3);
-  --danger: #ff6b6b;
+  --glass: rgba(255, 255, 255, 0.55);
+  --glass-border: rgba(60, 50, 35, 0.12);
+  --glass-hover: rgba(255, 255, 255, 0.72);
+  --surface: rgba(255, 253, 248, 0.92);
+  --text-primary: #2b2620;
+  --text-secondary: #8a8378;
+  --accent: #b8641f;
+  --accent-glow: rgba(184, 100, 31, 0.25);
+  --danger: #d64545;
 }
 
 * {
@@ -25,7 +25,7 @@ html {
 
 body {
   font-family: 'Inter', system-ui, -apple-system, sans-serif;
-  background: #0a0a12;
+  background: #f3ede2;
   color: var(--text-primary);
   min-height: 100dvh;
   overflow-x: hidden;
@@ -35,19 +35,19 @@ body {
 /* Scrollbar */
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
-::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb { background: rgba(60, 50, 35, 0.2); border-radius: 3px; }
 
-/* Glass card — more transparent so seasonal background shows through */
+/* Glass card — semi-transparent warm white so the seasonal background shows through */
 .glass {
-  background: rgba(255, 255, 255, 0.04);
+  background: rgba(255, 253, 248, 0.6);
   backdrop-filter: blur(6px);
   -webkit-backdrop-filter: blur(6px);
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(60, 50, 35, 0.1);
   border-radius: 16px;
 }
 .glass:hover {
-  background: rgba(255, 255, 255, 0.07);
-  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 253, 248, 0.75);
+  border-color: rgba(60, 50, 35, 0.16);
 }
 
 .glass-strong {
