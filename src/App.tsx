@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { listNews, me, logout, removeNews, getToken, clearSession, type NewsPost } from "./lib/convex";
+import { listNews, me, logout, removeNews, getToken, clearSession } from "./lib/convex";
 import SeasonalBackground from "./components/SeasonalBackground";
 import Header from "./components/Header";
 import NewsFeed from "./components/NewsFeed";
@@ -7,22 +7,24 @@ import AdminPanel from "./components/AdminPanel";
 import NewsEditor from "./components/NewsEditor";
 
 // Adapt the Supabase row to the shape NewsFeed expects
-function toFeedPost(n: NewsPost) {
-  // new posts carry a media[] array; fall back to the old single-image/video columns
-  const media = (n.media && n.media.length
-    ? n.media
+function toFeedPost(n: any) {
+  // new posts carry a media[] array; fall back to the old single-image/video columns.
+  // Guard everything: old cached entries may be missing fields entirely.
+  const rawMedia = Array.isArray(n?.media) ? n.media : [];
+  const media = (rawMedia.length
+    ? rawMedia
     : [
-        ...(n.image_url ? [{ type: "image", url: n.image_url }] : []),
-        ...(n.video_url ? [{ type: "video", url: n.video_url }] : []),
+        ...(n?.image_url ? [{ type: "image", url: n.image_url }] : []),
+        ...(n?.video_url ? [{ type: "video", url: n.video_url }] : []),
       ]
-  ).filter((m) => m && m.url);
+  ).filter((m: any) => m && m.url);
   return {
-    _id: n.id,
-    title: n.title,
-    body: n.body,
+    _id: String(n?.id ?? Math.random()),
+    title: String(n?.title ?? ""),
+    body: String(n?.body ?? ""),
     media: media as { type: string; url: string }[],
-    authorName: n.author_name,
-    createdAt: new Date(n.created_at).getTime(),
+    authorName: String(n?.author_name ?? ""),
+    createdAt: n?.created_at ? new Date(n.created_at).getTime() : Date.now(),
   };
 }
 
@@ -39,14 +41,20 @@ export default function App() {
     setLoading(true);
     try {
       const data = await listNews();
-      setPosts((data || []).map(toFeedPost));
-      try { localStorage.setItem("news_cache", JSON.stringify(data || [])); } catch {}
+      const normalized = (data || []).map(toFeedPost);
+      setPosts(normalized);
+      // Cache the ALREADY-NORMALIZED shape so an old cache can never crash the app
+      try { localStorage.setItem("news_cache", JSON.stringify(normalized)); } catch {}
     } catch {
       // Network/backend hiccup: show cached news instead of an empty feed
       try {
         const cached = localStorage.getItem("news_cache");
-        if (cached) setPosts(JSON.parse(cached).map(toFeedPost));
-      } catch {}
+        if (cached) {
+          const parsed = JSON.parse(cached);
+          // Cache may hold old raw rows OR new normalized posts — normalize handles both
+          setPosts(Array.isArray(parsed) ? parsed.map(toFeedPost) : []);
+        }
+      } catch { try { localStorage.removeItem("news_cache"); } catch {} }
     } finally {
       setLoading(false);
     }
