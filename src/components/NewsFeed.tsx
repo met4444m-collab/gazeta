@@ -90,7 +90,8 @@ function NewsCard({ post, publisherName, onEdit, onDelete }: {
   onDelete: (id: string) => void;
 }) {
   const [expanded, setExpanded] = useState(false);
-  const hasBody = post.body.trim().length > 0;
+  const safeMedia = Array.isArray(post.media) ? post.media : [];
+  const hasBody = typeof post.body === "string" && post.body.trim().length > 0;
 
   return (
     <article className="glass news-card">
@@ -115,9 +116,9 @@ function NewsCard({ post, publisherName, onEdit, onDelete }: {
       <h3 className="news-title">{post.title}</h3>
 
       {/* Media: first item big, the rest in a grid */}
-      {post.media.length > 0 && (
-        <div className="media-grid" style={{ gridTemplateColumns: post.media.length === 1 ? "1fr" : "1fr 1fr" }}>
-          {post.media.map((m, i) => (
+      {safeMedia.length > 0 && (
+        <div className="media-grid" style={{ gridTemplateColumns: safeMedia.length === 1 ? "1fr" : "1fr 1fr" }}>
+          {safeMedia.map((m, i) => (
             <MediaBlock key={i} item={m} />
           ))}
         </div>
