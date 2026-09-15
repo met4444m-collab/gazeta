@@ -23,32 +23,32 @@ const SEASONS: Record<Season, {
     startMonth: 11, endMonth: 1,
     falling: ["❄", "❅", "❆"],
     ground: ["❄", "❅", "❆", "white"],
-    groundColor: "rgba(180,210,240,0.12)",
-    skyGradient: "linear-gradient(180deg, rgba(60,100,160,0.08) 0%, transparent 40%)",
+    groundColor: "rgba(140,170,210,0.2)",
+    skyGradient: "linear-gradient(180deg, rgba(120,160,220,0.18) 0%, transparent 40%)",
     transitionMsg: "❄ Зима наступает...",
   },
   spring: {
     startMonth: 2, endMonth: 4,
     falling: ["🌸", "🍃", "✿"],
     ground: ["🌸", "🍃", "✿", "green"],
-    groundColor: "rgba(120,200,80,0.10)",
-    skyGradient: "linear-gradient(180deg, rgba(100,200,100,0.07) 0%, transparent 40%)",
+    groundColor: "rgba(110,190,80,0.16)",
+    skyGradient: "linear-gradient(180deg, rgba(120,210,110,0.16) 0%, transparent 40%)",
     transitionMsg: "🌸 Весна приходит...",
   },
   summer: {
     startMonth: 5, endMonth: 7,
     falling: ["☀", "✦", "✧"],
     ground: ["☀", "✦", "✧", "gold"],
-    groundColor: "rgba(255,200,50,0.08)",
-    skyGradient: "linear-gradient(180deg, rgba(255,200,50,0.06) 0%, transparent 40%)",
+    groundColor: "rgba(250,190,60,0.15)",
+    skyGradient: "linear-gradient(180deg, rgba(255,205,70,0.16) 0%, transparent 40%)",
     transitionMsg: "☀ Лето начинается...",
   },
   autumn: {
     startMonth: 8, endMonth: 10,
     falling: ["🍂", "🍁", "🌿"],
     ground: ["🍂", "🍁", "🌿", "brown"],
-    groundColor: "rgba(200,100,30,0.10)",
-    skyGradient: "linear-gradient(180deg, rgba(200,100,30,0.07) 0%, transparent 40%)",
+    groundColor: "rgba(190,110,40,0.16)",
+    skyGradient: "linear-gradient(180deg, rgba(215,140,60,0.18) 0%, transparent 40%)",
     transitionMsg: "🍂 Осень приближается...",
   },
 };
@@ -138,7 +138,7 @@ function generateGroundElements(season: Season, perRow: number, seed: number, pr
         left: x * 100 + (rng(seed, i * 1) - 0.5) * 1.6,     // horizontal jitter, neighbours overlap
         bottom: Math.min(r * ROW_HEIGHT_VH + rng(seed, i * 2) * ROW_HEIGHT_VH, topPct),
         size: 22 + rng(seed, i * 4) * 16,
-        opacity: 0.7 + rng(seed, i * 5) * 0.3,
+        opacity: 0.55 + rng(seed, i * 5) * 0.35,
         rotate: rng(seed, i * 6) * 360,
       });
       id++;
@@ -152,7 +152,7 @@ function generateGroundElements(season: Season, perRow: number, seed: number, pr
         left: x * 100 + (rng(seed, i * 1) - 0.5) * 2.2,
         bottom: topPct + rng(seed, i * 2) * ROW_HEIGHT_VH * 1.2,
         size: 14 + rng(seed, i * 4) * 10,
-        opacity: 0.35 + rng(seed, i * 5) * 0.3,
+        opacity: 0.3 + rng(seed, i * 5) * 0.3,
         rotate: rng(seed, i * 6) * 360,
       });
       id++;
@@ -172,12 +172,12 @@ function TransitionFlash({ msg, onDone }: { msg: string; onDone: () => void }) {
     <div style={{
       position: "fixed", inset: 0, zIndex: 200,
       display: "flex", alignItems: "center", justifyContent: "center",
-      background: "rgba(10,10,18,0.85)", backdropFilter: "blur(12px)",
+      background: "rgba(243,237,226,0.88)", backdropFilter: "blur(12px)",
       animation: "fadeFlash 3s ease-in-out forwards",
     }}>
       <div style={{
-        fontSize: 26, fontWeight: 700, color: "#e8e8f0",
-        textShadow: "0 0 20px rgba(108,159,255,0.4)",
+        fontSize: 26, fontWeight: 700, color: "#2b2620",
+        textShadow: "0 0 20px rgba(184,100,31,0.25)",
         animation: "scaleIn 0.6s ease-out",
       }}>
         {msg}
