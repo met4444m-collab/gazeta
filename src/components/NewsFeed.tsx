@@ -171,32 +171,32 @@ export default function NewsFeed({ publisherName, onEdit, onDelete, onNewPost, p
         .news-meta { display: flex; align-items: center; justify-content: space-between; margin-bottom: 12px; }
         .news-avatar {
           width: 30px; height: 30px; border-radius: 50%;
-          background: rgba(108, 159, 255, 0.15);
+          background: rgba(184, 100, 31, 0.12);
           display: flex; align-items: center; justify-content: center;
           font-size: 13px; font-weight: 700; color: var(--accent);
         }
         .news-author { font-size: 14px; font-weight: 500; color: var(--text-primary); }
         .news-time { font-size: 12px; color: var(--text-secondary); }
         .news-action { font-size: 13px; color: var(--text-secondary); cursor: pointer; background: none; border: none; padding: 2px 4px; border-radius: 6px; transition: background 0.15s; }
-        .news-action:hover { background: rgba(255,255,255,0.08); }
+        .news-action:hover { background: rgba(60,50,35,0.08); }
         .news-title {
           font-size: 18px; font-weight: 700; color: var(--text-primary);
           margin: 0 0 12px; line-height: 1.35; letter-spacing: 0.01em;
         }
         .media-grid { display: grid; gap: 8px; margin-bottom: 12px; }
-        .media-frame { margin: 0; border-radius: 10px; overflow: hidden; background: rgba(255,255,255,0.03); border: 1px solid rgba(255,255,255,0.06); }
+        .media-frame { margin: 0; border-radius: 10px; overflow: hidden; background: rgba(60,50,35,0.04); border: 1px solid rgba(60,50,35,0.08); }
         .expand-btn {
           display: flex; align-items: center; gap: 8px;
           width: 100%; padding: 9px 12px; margin-top: 2px;
-          background: rgba(108,159,255,0.08);
-          border: 1px solid rgba(108,159,255,0.18);
+          background: rgba(184,100,31,0.08);
+          border: 1px solid rgba(184,100,31,0.22);
           border-radius: 10px; cursor: pointer;
           color: var(--accent); font-size: 13px; font-weight: 600;
           transition: background 0.15s;
         }
-        .expand-btn:hover { background: rgba(108,159,255,0.14); }
+        .expand-btn:hover { background: rgba(184,100,31,0.14); }
         .expand-arrow { font-size: 17px; line-height: 1; }
-        .news-body { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,0.08); }
+        .news-body { margin-top: 12px; padding-top: 12px; border-top: 1px solid rgba(60,50,35,0.1); }
         .news-body p { font-size: 14px; color: var(--text-secondary); line-height: 1.65; }
         .new-post-btn {
           width: 100%; padding: 12px 16px; margin-bottom: 12px;
