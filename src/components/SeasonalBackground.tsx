@@ -217,6 +217,31 @@ export default function SeasonalBackground() {
     [season, perRow, seed, groundProgress]
   );
 
+  // Draw the whole leaf carpet onto a single canvas — one GPU surface instead
+  // of ~1000 individually animated DOM spans (which OOM-killed mobile browsers).
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  useEffect(() => {
+    const c = canvasRef.current;
+    if (!c) return;
+    const dpr = Math.min(2, window.devicePixelRatio || 1);
+    c.width = Math.max(1, Math.round(screen.w * dpr));
+    c.height = Math.max(1, Math.round(screen.h * dpr));
+    const ctx = c.getContext("2d");
+    if (!ctx) return;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    for (const el of groundElements) {
+      ctx.save();
+      ctx.globalAlpha = el.opacity;
+      ctx.translate((el.left / 100) * screen.w, screen.h - (el.bottom / 100) * screen.h);
+      ctx.rotate((el.rotate * Math.PI) / 180);
+      ctx.font = `${el.size}px system-ui, sans-serif`;
+      ctx.fillText(el.emoji, 0, 0);
+      ctx.restore();
+    }
+  }, [groundElements, screen]);
+
   // Falling particles: more as season progresses (capped — hundreds of animated
   // spans can crash weak phones)
   const fallingCount = Math.max(3, Math.round(groundProgress * 14));
@@ -286,22 +311,17 @@ export default function SeasonalBackground() {
         );
       })}
 
-      {/* Ground layer — fallen elements accumulating, fills up to 100% of screen */}
+      {/* Ground layer — fallen elements accumulating, drawn on ONE canvas
+          (hundreds of emoji DOM spans crashed weak mobile browsers) */}
       <div style={{
         position: "absolute", inset: 0,
         opacity: Math.min(1, 0.3 + groundProgress * 0.7),
         transition: "opacity 2s ease",
       }}>
-        {groundElements.map((el) => (
-          <span key={el.id} style={{
-            position: "absolute",
-            left: `${el.left}%`,
-            bottom: `${el.bottom}%`,
-            fontSize: el.size,
-            opacity: el.opacity,
-            transform: `rotate(${el.rotate}deg)`,
-          }}>{el.emoji}</span>
-        ))}
+        <canvas
+          ref={canvasRef}
+          style={{ position: "absolute", inset: 0, width: "100%", height: "100%" }}
+        />
       </div>
 
       {/* Foreground layer — falling leaves above the content (visible over posts, esp. mobile) */}
