@@ -89,15 +89,15 @@ export default function App() {
   const handlePostSaved = () => { setShowEditor(false); setEditingPost(null); fetchNews(); };
 
   return (
-    <div style={{ minHeight: "100dvh", background: "#0a0a12" }}>
+    <div style={{ minHeight: "100dvh", background: "#f3ede2" }}>
       <SeasonalBackground />
       <Header publisherName={publisherName} onLogout={handleLogout} />
       <main style={{ paddingTop: 64, paddingBottom: 48 }}>
         <section style={{ position: "relative", zIndex: 10, textAlign: "center", padding: "24px 16px 16px" }}>
-          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20, background: "rgba(108,159,255,0.1)", marginBottom: 12 }}>
-            <span style={{ fontSize: 12, fontWeight: 500, color: "#6c9fff" }}>📰 Школьная газета</span>
+          <div style={{ display: "inline-flex", alignItems: "center", gap: 8, padding: "6px 14px", borderRadius: 20, background: "rgba(184,100,31,0.1)", marginBottom: 12 }}>
+            <span style={{ fontSize: 12, fontWeight: 500, color: "#b8641f" }}>📰 Школьная газета</span>
           </div>
-          <h1 style={{ fontSize: 28, fontWeight: 700, color: "#e8e8f0" }}>Лицей 12</h1>
+          <h1 style={{ fontSize: 28, fontWeight: 700, color: "#2b2620" }}>Лицей 12</h1>
         </section>
         <NewsFeed publisherName={publisherName} onEdit={handleEditPost} onDelete={handleDeletePost} onNewPost={handleNewPost} posts={posts} loading={loading} />
       </main>
