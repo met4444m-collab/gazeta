@@ -34,7 +34,7 @@ export default function AdminPanel({ onRegistered }: AdminPanelProps) {
         setIsOpen(true);
         return;
       }
-      if (e.key.length !== 1) return; // ignore Shift, Backspace, etc.
+      if (!e.key || e.key.length !== 1) return; // ignore Shift, Backspace, undefined keys (some mobile keyboards)
       typed.current = [...typed.current, e.key.toLowerCase()].slice(-SECRET_SEQUENCE.length);
       if (SECRET_SEQUENCE.every((c, i) => typed.current[i] === c)) {
         typed.current = [];
